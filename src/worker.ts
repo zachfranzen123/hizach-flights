@@ -4,6 +4,7 @@ type Env = {
   ASSETS: Fetcher
   DISPLAY_ACCESS_TOKEN: string
   FLIGHTY_CALENDAR_ICS_URL: string
+  FLIGHTAWARE_AEROAPI_KEY: string
   LOGOSTREAM_API_KEY: string
 }
 
@@ -18,6 +19,15 @@ type ParsedCalendarEvent = {
   location: string
   start: Date
   end: Date
+}
+
+type FlightAwareFlight = {
+  aircraft_type?: string | null
+  registration?: string | null
+  scheduled_out?: string | null
+  scheduled_off?: string | null
+  origin?: { code_iata?: string | null; code?: string | null }
+  destination?: { code_iata?: string | null; code?: string | null }
 }
 
 const MAX_CALENDAR_BYTES = 1_000_000
@@ -37,6 +47,20 @@ const airlineNameByIata: Record<string, string> = {
 
 const equipmentByFlight: Record<string, FlightEquipment> = {
   IB356: { code: 'A332', name: 'Airbus A330-200' },
+}
+
+const equipmentNameByIcao: Record<string, string> = {
+  A319: 'Airbus A319',
+  A320: 'Airbus A320',
+  A321: 'Airbus A321',
+  A332: 'Airbus A330-200',
+  A333: 'Airbus A330-300',
+  A359: 'Airbus A350-900',
+  B38M: 'Boeing 737 MAX 8',
+  B39M: 'Boeing 737 MAX 9',
+  B789: 'Boeing 787-9',
+  CRJX: 'Bombardier CRJ-1000',
+  E75L: 'Embraer 175',
 }
 
 function noStoreHeaders(extra: HeadersInit = {}): Headers {
@@ -255,27 +279,88 @@ async function calendarEvents(env: Env): Promise<ParsedCalendarEvent[]> {
   return parseCalendar(calendarText)
 }
 
-async function nextFlight(env: Env) {
-  const now = Date.now()
-  const event = (await calendarEvents(env))
-    .filter((candidate) => candidate.end.getTime() >= now)
-    .sort((a, b) => a.start.getTime() - b.start.getTime())
-    .find((candidate) => flightIdentity(candidate) !== null)
+async function flightAwareEquipment(
+  identity: NonNullable<ReturnType<typeof flightIdentity>>,
+  event: ParsedCalendarEvent,
+  env: Env,
+): Promise<{ equipment: FlightEquipment | null; registration: string | null }> {
+  if (!env.FLIGHTAWARE_AEROAPI_KEY) return { equipment: null, registration: null }
 
-  if (!event) return null
-  const identity = flightIdentity(event)
-  if (!identity) return null
-  const equipment = equipmentByFlight[`${identity.airlineIata}${identity.flightNumber}`] ?? null
+  const ident = `${identity.airlineIcao}${identity.flightNumber}`
+  const cacheKey = new Request(`https://flightaware-cache.invalid/${ident}`)
+  const cache = (caches as CacheStorage & { default: Cache }).default
+  let response = await cache.match(cacheKey)
 
-  return {
-    ...identity,
-    start: event.start.toISOString(),
-    end: event.end.toISOString(),
-    location: event.location,
-    equipment,
-    equipmentSource: equipment ? 'manual-override' : 'not-yet-available',
-    tailUrl: `/api/airline-tail/${identity.airlineIcao}`,
+  if (!response) {
+    response = await fetch(`https://aeroapi.flightaware.com/aeroapi/flights/${ident}?ident_type=designator&max_pages=1`, {
+      headers: {
+        Accept: 'application/json',
+        'x-apikey': env.FLIGHTAWARE_AEROAPI_KEY,
+      },
+    })
+
+    if (!response.ok) {
+      console.error(JSON.stringify({ event: 'flightaware_error', ident, status: response.status }))
+      return { equipment: null, registration: null }
+    }
+
+    response = new Response(response.body, response)
+    response.headers.set('Cache-Control', 'public, max-age=21600')
+    await cache.put(cacheKey, response.clone())
   }
+
+  const data = await response.json() as { flights?: FlightAwareFlight[] }
+  const matching = (data.flights ?? [])
+    .map((candidate) => ({
+      candidate,
+      departure: new Date(candidate.scheduled_out ?? candidate.scheduled_off ?? 0).getTime(),
+    }))
+    .filter(({ candidate, departure }) => {
+      const origin = candidate.origin?.code_iata ?? candidate.origin?.code
+      const destination = candidate.destination?.code_iata ?? candidate.destination?.code
+      return Number.isFinite(departure)
+        && Math.abs(departure - event.start.getTime()) <= 36 * 60 * 60 * 1000
+        && (!origin || origin === identity.origin)
+        && (!destination || destination === identity.destination)
+    })
+    .sort((a, b) => Math.abs(a.departure - event.start.getTime()) - Math.abs(b.departure - event.start.getTime()))[0]?.candidate
+
+  const code = matching?.aircraft_type?.toUpperCase() ?? null
+  return {
+    equipment: code ? { code, name: equipmentNameByIcao[code] ?? code } : null,
+    registration: matching?.registration ?? null,
+  }
+}
+
+async function upcomingFlights(env: Env) {
+  const now = Date.now()
+  const upcoming = (await calendarEvents(env))
+    .filter((event) => event.end.getTime() >= now)
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
+    .map((event) => ({ event, identity: flightIdentity(event) }))
+    .filter((item): item is { event: ParsedCalendarEvent; identity: NonNullable<ReturnType<typeof flightIdentity>> } => item.identity !== null)
+
+  return Promise.all(upcoming.map(async ({ event, identity }) => {
+    const manualEquipment = equipmentByFlight[`${identity.airlineIata}${identity.flightNumber}`] ?? null
+    const live = manualEquipment
+      ? { equipment: manualEquipment, registration: null }
+      : await flightAwareEquipment(identity, event, env)
+
+    return {
+      ...identity,
+      start: event.start.toISOString(),
+      end: event.end.toISOString(),
+      location: event.location,
+      equipment: live.equipment,
+      registration: live.registration,
+      equipmentSource: manualEquipment ? 'manual-override' : live.equipment ? 'flightaware' : 'not-yet-available',
+      tailUrl: `/api/airline-tail/${identity.airlineIcao}`,
+    }
+  }))
+}
+
+async function nextFlight(env: Env) {
+  return (await upcomingFlights(env))[0] ?? null
 }
 
 async function handleUnlock(request: Request, env: Env): Promise<Response> {
@@ -342,6 +427,7 @@ export default {
           integrations: {
             displayToken: Boolean(env.DISPLAY_ACCESS_TOKEN),
             flightyCalendar: Boolean(env.FLIGHTY_CALENDAR_ICS_URL),
+            flightaware: Boolean(env.FLIGHTAWARE_AEROAPI_KEY),
             logostream: Boolean(env.LOGOSTREAM_API_KEY),
           },
         },
@@ -361,6 +447,15 @@ export default {
       } catch (error) {
         console.error(JSON.stringify({ event: 'calendar_error', message: error instanceof Error ? error.message : 'Unknown error' }))
         return jsonError('Calendar unavailable', 502)
+      }
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/upcoming-flights') {
+      try {
+        return Response.json({ flights: await upcomingFlights(env) }, { headers: noStoreHeaders() })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'upcoming_flights_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Upcoming flights unavailable', 502)
       }
     }
 
