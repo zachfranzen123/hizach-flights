@@ -40,6 +40,7 @@ type DisplayPhase = 'loading' | 'locked' | 'ready' | 'empty' | 'error'
 const airportDetails: Record<string, { city: string; timeZone: string }> = {
   BIO: { city: 'Bilbao', timeZone: 'Europe/Madrid' },
   MAD: { city: 'Madrid', timeZone: 'Europe/Madrid' },
+  SEA: { city: 'Seattle', timeZone: 'America/Los_Angeles' },
   SFO: { city: 'San Francisco', timeZone: 'America/Los_Angeles' },
 }
 
