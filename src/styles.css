@@ -245,8 +245,8 @@ a:focus-visible {
 
 .aircraft-stage img {
   display: block;
-  width: 94%;
-  max-width: 94%;
+  width: 106%;
+  max-width: 106%;
   filter: saturate(0.96) contrast(1.03);
 }
 
