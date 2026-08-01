@@ -4,6 +4,8 @@ import { DisplayDialog } from './components/DisplayDialog'
 import { FlightPoster, type PosterPalette } from './components/FlightPoster'
 import { PaletteControl } from './components/PaletteControl'
 import { sampleFlight } from './data/sampleFlight'
+import frameBedroomCycle from './assets/demo/frame-bedroom-cycle.gif'
+import frameBedroomStill from './assets/demo/frame-bedroom-still.jpg'
 
 const palettes: PosterPalette[] = [
   { name: 'Aviation blue', background: '#164b91', foreground: '#fffdf5', muted: '#d9e5f4' },
@@ -26,7 +28,7 @@ const workflow = [
   {
     icon: Frame,
     title: 'The destination',
-    body: 'Eventually this page will live on a 13.3-inch color e-paper frame in my home.',
+    body: 'The 13.3-inch color e-paper panel will sit behind a custom mat in an 11 × 14-inch frame.',
   },
 ]
 
@@ -75,6 +77,28 @@ function App() {
               <FlightPoster flight={sampleFlight} palette={palette} />
             </div>
           </div>
+        </section>
+
+        <section className="frame-showcase" id="frame">
+          <div className="frame-showcase-copy">
+            <p className="frame-kicker">The finished frame</p>
+            <h2>Made for one wall.</h2>
+            <p>The display switches to a flight poster a few hours before departure, then returns to a rotating photo after I land.</p>
+            <p className="frame-spec">11 × 14 in frame · 7⅞ × 10½ in visible opening</p>
+          </div>
+          <figure className="frame-demo">
+            <picture>
+              <source media="(prefers-reduced-motion: reduce)" srcSet={frameBedroomStill} />
+              <img
+                src={frameBedroomCycle}
+                alt="An accurate-scale mockup of an 11-by-14-inch e-paper frame cycling between flight posters and black-and-white photos in a bedroom"
+                width="960"
+                height="600"
+                loading="lazy"
+              />
+            </picture>
+            <figcaption>Bedroom mockup · flight mode and photo mode</figcaption>
+          </figure>
         </section>
 
         <section className="process-section" id="about">
