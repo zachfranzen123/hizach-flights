@@ -50,10 +50,14 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
       </div>
 
       <figure className="aircraft-stage">
-        <img
-          src={aircraftArtwork}
-          alt={`Side profile of an ${flight.airline} ${flight.aircraftName}`}
-        />
+        {flight.aircraftCode === 'A332' ? (
+          <img
+            src={aircraftArtwork}
+            alt={`Side profile of an ${flight.airline} ${flight.aircraftName}`}
+          />
+        ) : (
+          <p className="aircraft-pending">AIRCRAFT ARTWORK<br />PENDING ASSIGNMENT</p>
+        )}
       </figure>
 
       <footer className="poster-details">
