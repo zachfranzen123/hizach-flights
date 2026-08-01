@@ -1,3 +1,4 @@
+import aircraftArtwork from '../assets/iberia-a330.png'
 import type { Flight } from '../data/sampleFlight'
 
 export type PosterPalette = {
@@ -48,18 +49,14 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
         <p>{flight.origin}<span aria-hidden="true"> → </span>{flight.destination}</p>
       </div>
 
-      <figure className="aircraft-stage tail-hero-stage">
-        {flight.tailUrl ? (
+      <figure className="aircraft-stage">
+        {flight.aircraftCode === 'A332' ? (
           <img
-            className="poster-tail-hero"
-            src={flight.tailUrl}
-            alt={`${flight.airline} aircraft tail`}
-            onError={(event) => {
-              event.currentTarget.hidden = true
-            }}
+            src={aircraftArtwork}
+            alt={`Side profile of an ${flight.airline} ${flight.aircraftName}`}
           />
         ) : (
-          <p className="aircraft-pending">AIRLINE TAIL<br />UNAVAILABLE</p>
+          <p className="aircraft-pending">AIRCRAFT ARTWORK<br />PENDING ASSIGNMENT</p>
         )}
       </figure>
 
