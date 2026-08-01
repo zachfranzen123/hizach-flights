@@ -223,9 +223,14 @@ export function parseCalendar(ics: string): ParsedCalendarEvent[] {
 }
 
 export function flightIdentity(event: ParsedCalendarEvent) {
-  const searchable = `${event.summary}\n${event.description}`.toUpperCase()
-  const route = searchable.match(/\b([A-Z]{3})\s*(?:→|->|TO)\s*([A-Z]{3})\b/)
-  const flight = searchable.match(/(?:^|[•\s])([A-Z0-9]{2})\s*(\d{1,4})\b/m)
+  const summary = event.summary.toUpperCase()
+  const searchable = `${summary}\n${event.description.toUpperCase()}`
+  const route =
+    summary.match(/\b([A-Z]{3})\b\s*(?:→|➞|⟶|->|–|—|\/|TO)\s*\b([A-Z]{3})\b/) ??
+    summary.match(/\b([A-Z]{3})\b\s*[^A-Z0-9\n]{1,6}\s*\b([A-Z]{3})\b/)
+  const flight =
+    summary.match(/(?:^|[•·|\s])([A-Z0-9]{2})\s*[- ]?\s*(\d{1,4})\b/) ??
+    searchable.match(/\b(IB|AS|AF)\s*[- ]?\s*(\d{1,4})\b/)
   if (!route || !flight) return null
 
   const airlineIata = flight[1]
@@ -240,15 +245,19 @@ export function flightIdentity(event: ParsedCalendarEvent) {
   }
 }
 
-async function nextFlight(env: Env) {
+async function calendarEvents(env: Env): Promise<ParsedCalendarEvent[]> {
   const calendarResponse = await fetch(env.FLIGHTY_CALENDAR_ICS_URL, {
     headers: { Accept: 'text/calendar' },
   })
   if (!calendarResponse.ok) throw new Error(`Calendar returned ${calendarResponse.status}`)
 
   const calendarText = await readTextLimited(calendarResponse, MAX_CALENDAR_BYTES)
+  return parseCalendar(calendarText)
+}
+
+async function nextFlight(env: Env) {
   const now = Date.now()
-  const event = parseCalendar(calendarText)
+  const event = (await calendarEvents(env))
     .filter((candidate) => candidate.end.getTime() >= now)
     .sort((a, b) => a.start.getTime() - b.start.getTime())
     .find((candidate) => flightIdentity(candidate) !== null)
@@ -348,6 +357,29 @@ export default {
         return Response.json({ flight: await nextFlight(env) }, { headers: noStoreHeaders() })
       } catch (error) {
         console.error(JSON.stringify({ event: 'calendar_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Calendar unavailable', 502)
+      }
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/calendar-preview') {
+      try {
+        const now = Date.now()
+        const events = (await calendarEvents(env))
+          .sort((a, b) => a.start.getTime() - b.start.getTime())
+          .slice(0, 20)
+          .map((event) => ({
+            summary: event.summary,
+            start: event.start.toISOString(),
+            end: event.end.toISOString(),
+            upcoming: event.end.getTime() >= now,
+            identity: flightIdentity(event),
+          }))
+        return Response.json(
+          { now: new Date(now).toISOString(), events },
+          { headers: noStoreHeaders() },
+        )
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'calendar_preview_error', message: error instanceof Error ? error.message : 'Unknown error' }))
         return jsonError('Calendar unavailable', 502)
       }
     }
