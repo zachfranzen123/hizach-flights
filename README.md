@@ -29,7 +29,14 @@ The deployed project will use encrypted server-side environment values. Never ex
 
 - `FLIGHTY_CALENDAR_ICS_URL`
 - `LOGOSTREAM_API_KEY`
-- A flight-equipment API key if the calendar event does not provide aircraft type
+- `FLIGHTAWARE_AEROAPI_KEY`
+- `RESEND_API_KEY`
+- `ARTWORK_ALERT_TO`
+
+The Worker checks upcoming flights daily at 17:00 UTC. If an assigned or typical
+aircraft does not have matching airline artwork, it sends a deduplicated email
+from `flight-alerts@hizach.com`. The authenticated `POST /api/test-artwork-alert`
+route can be used to test the notification on demand.
 
 The public root should remain a sample/attribution page. Real itinerary data belongs behind an authenticated or unguessable private display endpoint.
 
