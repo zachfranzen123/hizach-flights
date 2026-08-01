@@ -432,6 +432,61 @@ a:focus-visible {
   height: min(calc(100vh - 48px), calc((100vw - 48px) * 1.3333));
 }
 
+.flight-preview-nav {
+  position: fixed;
+  z-index: 21;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 10px;
+  border: 1px solid #555;
+  border-radius: 999px;
+  background: rgb(17 17 17 / 92%);
+  color: #fff;
+}
+
+.flight-preview-nav p {
+  min-width: 78px;
+  margin: 0;
+  text-align: center;
+  font: 600 11px/1.2 Arial, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.flight-preview-nav button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+}
+
+.flight-preview-nav button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.flight-preview-nav svg {
+  width: 18px;
+}
+
+.aircraft-pending {
+  margin: 0;
+  color: var(--poster-muted);
+  font: 700 clamp(10px, 1.3vw, 16px)/1.5 Arial, sans-serif;
+  letter-spacing: 0.14em;
+  text-align: center;
+}
+
 .display-state {
   width: min(100%, 430px);
   padding: 38px;
