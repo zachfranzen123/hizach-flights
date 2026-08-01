@@ -20,6 +20,11 @@ type LiveFlight = {
       code: string
       name: string
     }
+    equipmentSource: 'manual-override' | 'flightaware-assigned' | 'flightaware-typical' | 'not-yet-available'
+    equipmentEvidence: null | {
+      matchingCount: number
+      totalCount: number
+    }
     flightNumber: string
     origin: string
     start: string
@@ -77,6 +82,10 @@ function toPosterFlight(live: LiveFlight): Flight {
     arrivalTime: timeLabel(live.end, destination.timeZone),
     aircraftName: live.equipment?.name ?? 'Aircraft pending',
     aircraftCode: live.equipment?.code ?? 'TBD',
+    aircraftLabel: live.equipmentSource === 'flightaware-typical' ? 'Typical aircraft' : 'Aircraft',
+    aircraftNote: live.equipmentSource === 'flightaware-typical' && live.equipmentEvidence
+      ? `${live.equipmentEvidence.matchingCount} of ${live.equipmentEvidence.totalCount} recent flights`
+      : undefined,
     tailUrl: live.tailUrl,
     status: 'up-next',
   }
