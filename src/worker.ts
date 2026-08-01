@@ -301,15 +301,18 @@ async function handleUnlock(request: Request, env: Env): Promise<Response> {
 async function handleTail(icao: string, env: Env): Promise<Response> {
   if (!/^[A-Z0-9]{3}$/.test(icao)) return jsonError('Invalid airline code', 400)
 
-  const upstream = await fetch(
-    `https://airlines-api.logostream.dev/airlines/icao/${icao}?variant=tail&format=png&size=400`,
-    {
-      headers: {
-        Accept: 'image/png',
-        'x-api-key': env.LOGOSTREAM_API_KEY,
-      },
+  const upstreamUrl = new URL(`https://airlines-api.logostream.dev/airlines/icao/${icao}`)
+  upstreamUrl.searchParams.set('variant', 'tail')
+  upstreamUrl.searchParams.set('format', 'png')
+  upstreamUrl.searchParams.set('size', '400')
+  upstreamUrl.searchParams.set('key', env.LOGOSTREAM_API_KEY)
+
+  const upstream = await fetch(upstreamUrl, {
+    headers: {
+      Accept: 'image/png',
+      'x-api-key': env.LOGOSTREAM_API_KEY,
     },
-  )
+  })
 
   if (!upstream.ok || !upstream.body) {
     console.error(JSON.stringify({ event: 'logostream_error', icao, status: upstream.status }))
