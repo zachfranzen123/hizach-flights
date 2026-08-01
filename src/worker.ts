@@ -6,6 +6,8 @@ type Env = {
   FLIGHTY_CALENDAR_ICS_URL: string
   FLIGHTAWARE_AEROAPI_KEY: string
   LOGOSTREAM_API_KEY: string
+  RESEND_API_KEY: string
+  ARTWORK_ALERT_TO: string
 }
 
 type FlightEquipment = {
@@ -32,6 +34,13 @@ type FlightAwareFlight = {
 
 const MAX_CALENDAR_BYTES = 1_000_000
 const MAX_UNLOCK_BYTES = 4_096
+const ARTWORK_ALERT_FROM = 'Flight Poster <flight-alerts@hizach.com>'
+const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
+
+const artworkByAirline: Record<string, ReadonlySet<string>> = {
+  AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L']),
+  IB: new Set(['A332']),
+}
 
 const airlineIcaoByIata: Record<string, string> = {
   AF: 'AFR',
@@ -398,6 +407,85 @@ async function nextFlight(env: Env) {
   return (await upcomingFlights(env))[0] ?? null
 }
 
+type UpcomingFlight = Awaited<ReturnType<typeof upcomingFlights>>[number]
+
+function missingArtwork(flights: UpcomingFlight[]): UpcomingFlight[] {
+  return flights.filter((flight) => {
+    const aircraftCode = flight.equipment?.code
+    return Boolean(aircraftCode) && !(artworkByAirline[flight.airlineIata]?.has(aircraftCode as string) ?? false)
+  })
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+}
+
+function artworkAlertFingerprint(flights: UpcomingFlight[]): string {
+  return flights
+    .map((flight) => `${flight.airlineIata}-${flight.equipment?.code ?? 'UNKNOWN'}`)
+    .sort()
+    .join('|')
+}
+
+async function sendMissingArtworkAlert(env: Env): Promise<{ sent: boolean; missing: number; reason?: string }> {
+  if (!env.RESEND_API_KEY || !env.ARTWORK_ALERT_TO) {
+    console.error(JSON.stringify({ event: 'artwork_alert_configuration_missing' }))
+    return { sent: false, missing: 0, reason: 'configuration-missing' }
+  }
+
+  const flights = missingArtwork(await upcomingFlights(env))
+  if (flights.length === 0) return { sent: false, missing: 0, reason: 'nothing-missing' }
+
+  const fingerprint = artworkAlertFingerprint(flights)
+  const cache = (caches as CacheStorage & { default: Cache }).default
+  const cacheKey = new Request(`https://artwork-alert-cache.invalid/${encodeURIComponent(fingerprint)}`)
+  if (await cache.match(cacheKey)) {
+    return { sent: false, missing: flights.length, reason: 'already-notified' }
+  }
+
+  const rows = flights.map((flight) => {
+    const equipment = flight.equipment as FlightEquipment
+    return `<li><strong>${escapeHtml(`${flight.airlineName} ${flight.airlineIata}${flight.flightNumber}`)}</strong> — ${escapeHtml(`${flight.origin} → ${flight.destination}`)}<br>${escapeHtml(`${equipment.name} (${equipment.code})`)} · ${escapeHtml(new Date(flight.start).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric' }))}</li>`
+  }).join('')
+  const prompt = `Create transparent side-profile aircraft artwork for the missing combinations: ${flights.map((flight) => `${flight.airlineName} ${flight.equipment?.name} (${flight.equipment?.code})`).join('; ')}. Match the existing flight poster artwork style and proportions, then add each asset to the flights.hizach.com aircraft mapping.`
+  const text = flights.map((flight) => {
+    return `${flight.airlineName} ${flight.airlineIata}${flight.flightNumber}: ${flight.origin} to ${flight.destination} — ${flight.equipment?.name} (${flight.equipment?.code})`
+  }).join('\n')
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': `artwork-${fingerprint}`.slice(0, 256),
+    },
+    body: JSON.stringify({
+      from: ARTWORK_ALERT_FROM,
+      to: [env.ARTWORK_ALERT_TO],
+      subject: `${flights.length} aircraft artwork ${flights.length === 1 ? 'combination needs' : 'combinations need'} attention`,
+      text: `Your flight poster needs new aircraft artwork:\n\n${text}\n\nReady-to-copy request:\n${prompt}\n\nOpen the poster: https://flights.hizach.com`,
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#172033;max-width:640px"><p style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#60708a">HiZach Flights · personal project</p><h1 style="font-size:26px">Aircraft artwork needed</h1><p>An upcoming flight has an airline and aircraft combination that is not yet in your poster library.</p><ul style="padding-left:22px">${rows}</ul><h2 style="font-size:18px;margin-top:28px">Ready-to-copy request</h2><p style="background:#f2f5f8;padding:16px;border-radius:8px">${escapeHtml(prompt)}</p><p><a href="https://flights.hizach.com">Open your flight poster</a></p></div>`,
+    }),
+  })
+
+  if (!response.ok) {
+    const details = await readTextLimited(response, 16_384)
+    console.error(JSON.stringify({ event: 'resend_error', status: response.status, details }))
+    throw new Error(`Resend returned ${response.status}`)
+  }
+
+  await cache.put(cacheKey, new Response('sent', {
+    headers: { 'Cache-Control': `public, max-age=${ARTWORK_ALERT_CACHE_SECONDS}` },
+  }))
+  console.log(JSON.stringify({ event: 'artwork_alert_sent', missing: flights.length, fingerprint }))
+  return { sent: true, missing: flights.length }
+}
+
 async function handleUnlock(request: Request, env: Env): Promise<Response> {
   let input: { token?: string }
   try {
@@ -464,6 +552,8 @@ export default {
             flightyCalendar: Boolean(env.FLIGHTY_CALENDAR_ICS_URL),
             flightaware: Boolean(env.FLIGHTAWARE_AEROAPI_KEY),
             logostream: Boolean(env.LOGOSTREAM_API_KEY),
+            resend: Boolean(env.RESEND_API_KEY),
+            artworkAlertRecipient: Boolean(env.ARTWORK_ALERT_TO),
           },
         },
         { headers: noStoreHeaders() },
@@ -491,6 +581,15 @@ export default {
       } catch (error) {
         console.error(JSON.stringify({ event: 'upcoming_flights_error', message: error instanceof Error ? error.message : 'Unknown error' }))
         return jsonError('Upcoming flights unavailable', 502)
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/test-artwork-alert') {
+      try {
+        return Response.json(await sendMissingArtworkAlert(env), { headers: noStoreHeaders() })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'artwork_alert_test_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Artwork alert failed', 502)
       }
     }
 
@@ -534,5 +633,11 @@ export default {
     }
 
     return jsonError('Not found', 404)
+  },
+
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(sendMissingArtworkAlert(env).catch((error) => {
+      console.error(JSON.stringify({ event: 'artwork_alert_scheduled_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+    }))
   },
 } satisfies ExportedHandler<Env>
