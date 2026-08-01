@@ -35,6 +35,9 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
               className="poster-tail-mark"
               src={flight.tailUrl}
               alt={`${flight.airline} tail artwork`}
+              onError={(event) => {
+                event.currentTarget.hidden = true
+              }}
             />
           )}
         </div>
