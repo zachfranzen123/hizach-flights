@@ -1,4 +1,10 @@
-import aircraftArtwork from '../assets/iberia-a330.png'
+import iberiaA330 from '../assets/iberia-a330.png'
+import alaska737700 from '../assets/aircraft/alaska-737-700.png'
+import alaska737800 from '../assets/aircraft/alaska-737-800.png'
+import alaska737900er from '../assets/aircraft/alaska-737-900er.png'
+import alaska737Max8 from '../assets/aircraft/alaska-737-max-8.png'
+import alaska737Max9 from '../assets/aircraft/alaska-737-max-9.png'
+import alaskaE175 from '../assets/aircraft/alaska-e175.png'
 import type { Flight } from '../data/sampleFlight'
 
 export type PosterPalette = {
@@ -16,6 +22,17 @@ type FlightPosterProps = {
 
 export function FlightPoster({ flight, palette, className = '' }: FlightPosterProps) {
   const statusLabel = flight.status === 'current' ? 'IN FLIGHT' : 'UP NEXT'
+  const artworkByAircraft: Record<string, string> = flight.airlineIata === 'AS'
+    ? {
+        B737: alaska737700,
+        B738: alaska737800,
+        B739: alaska737900er,
+        B38M: alaska737Max8,
+        B39M: alaska737Max9,
+        E75L: alaskaE175,
+      }
+    : { A332: iberiaA330 }
+  const aircraftArtwork = artworkByAircraft[flight.aircraftCode]
 
   return (
     <article
@@ -50,7 +67,7 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
       </div>
 
       <figure className="aircraft-stage">
-        {flight.aircraftCode === 'A332' ? (
+        {aircraftArtwork ? (
           <img
             src={aircraftArtwork}
             alt={`Side profile of an ${flight.airline} ${flight.aircraftName}`}
