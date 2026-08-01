@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { KeyRound, LoaderCircle, RefreshCw, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, KeyRound, LoaderCircle, RefreshCw, X } from 'lucide-react'
 import type { Flight } from '../data/sampleFlight'
 import { FlightPoster, type PosterPalette } from './FlightPoster'
 
@@ -10,8 +10,7 @@ type DisplayDialogProps = {
   palette: PosterPalette
 }
 
-type LiveFlightResponse = {
-  flight: null | {
+type LiveFlight = {
     airlineIata: string
     airlineIcao: string
     airlineName: string
@@ -25,12 +24,16 @@ type LiveFlightResponse = {
     origin: string
     start: string
     tailUrl: string
-  }
+}
+
+type LiveFlightResponse = {
+  flights: LiveFlight[]
 }
 
 type DisplayPhase = 'loading' | 'locked' | 'ready' | 'empty' | 'error'
 
 const airportDetails: Record<string, { city: string; timeZone: string }> = {
+  BIO: { city: 'Bilbao', timeZone: 'Europe/Madrid' },
   MAD: { city: 'Madrid', timeZone: 'Europe/Madrid' },
   SFO: { city: 'San Francisco', timeZone: 'America/Los_Angeles' },
 }
@@ -56,7 +59,7 @@ function timeLabel(iso: string, timeZone: string): string {
   }).format(new Date(iso))
 }
 
-function toPosterFlight(live: NonNullable<LiveFlightResponse['flight']>): Flight {
+function toPosterFlight(live: LiveFlight): Flight {
   const origin = airportDetails[live.origin] ?? { city: live.origin, timeZone: 'UTC' }
   const destination = airportDetails[live.destination] ?? { city: live.destination, timeZone: 'UTC' }
 
@@ -81,7 +84,8 @@ function toPosterFlight(live: NonNullable<LiveFlightResponse['flight']>): Flight
 
 export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogProps) {
   const [phase, setPhase] = useState<DisplayPhase>('loading')
-  const [liveFlight, setLiveFlight] = useState<Flight | null>(null)
+  const [liveFlights, setLiveFlights] = useState<Flight[]>([])
+  const [flightIndex, setFlightIndex] = useState(0)
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
 
@@ -90,7 +94,7 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
     setMessage('')
 
     try {
-      const response = await fetch('/api/next-flight', {
+      const response = await fetch('/api/upcoming-flights', {
         credentials: 'same-origin',
         signal,
       })
@@ -102,12 +106,13 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
       if (!response.ok) throw new Error('The live flight could not be loaded.')
 
       const data = (await response.json()) as LiveFlightResponse
-      if (!data.flight) {
+      if (!data.flights.length) {
         setPhase('empty')
         return
       }
 
-      setLiveFlight(toPosterFlight(data.flight))
+      setLiveFlights(data.flights.map(toPosterFlight))
+      setFlightIndex(0)
       setPhase('ready')
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
@@ -159,8 +164,31 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
         <X aria-hidden="true" />
       </button>
 
-      {phase === 'ready' && liveFlight && (
-        <FlightPoster flight={liveFlight} palette={palette} className="poster-fullscreen" />
+      {phase === 'ready' && liveFlights[flightIndex] && (
+        <>
+          <FlightPoster flight={liveFlights[flightIndex]} palette={palette} className="poster-fullscreen" />
+          {liveFlights.length > 1 && (
+            <nav className="flight-preview-nav" aria-label="Upcoming flight previews">
+              <button
+                type="button"
+                onClick={() => setFlightIndex((index) => Math.max(0, index - 1))}
+                disabled={flightIndex === 0}
+                aria-label="Previous flight"
+              >
+                <ChevronLeft aria-hidden="true" />
+              </button>
+              <p>Flight {flightIndex + 1} of {liveFlights.length}</p>
+              <button
+                type="button"
+                onClick={() => setFlightIndex((index) => Math.min(liveFlights.length - 1, index + 1))}
+                disabled={flightIndex === liveFlights.length - 1}
+                aria-label="Next flight"
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </nav>
+          )}
+        </>
       )}
 
       {phase === 'loading' && (
@@ -198,7 +226,8 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
           <button
             type="button"
             onClick={() => {
-              setLiveFlight(flight)
+              setLiveFlights([flight])
+              setFlightIndex(0)
               setPhase('ready')
             }}
           >
