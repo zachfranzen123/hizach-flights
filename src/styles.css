@@ -190,6 +190,19 @@ a:focus-visible {
   align-items: baseline;
 }
 
+.poster-status {
+  display: flex;
+  align-items: center;
+  gap: 3cqw;
+}
+
+.poster-tail-mark {
+  width: auto;
+  max-width: 12cqw;
+  height: 7cqw;
+  object-fit: contain;
+}
+
 .poster-label,
 .poster-date,
 .poster-code,
@@ -417,6 +430,84 @@ a:focus-visible {
 .poster-fullscreen {
   width: min(calc((100vh - 48px) * 0.75), calc(100vw - 48px));
   height: min(calc(100vh - 48px), calc((100vw - 48px) * 1.3333));
+}
+
+.display-state {
+  width: min(100%, 430px);
+  padding: 38px;
+  color: #151515;
+  background: #fff;
+  border: 10px solid #f4f1e9;
+  outline: 1px solid #777;
+}
+
+.display-state > svg {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 28px;
+  stroke-width: 1.4;
+}
+
+.display-state h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 36px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+.display-state p {
+  margin: 12px 0 0;
+  color: #5d5d59;
+  line-height: 1.5;
+}
+
+.display-state button {
+  margin-top: 24px;
+  padding: 13px 17px;
+  color: #fff;
+  background: #164b91;
+  border: 0;
+  border-radius: 2px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.unlock-form {
+  display: grid;
+}
+
+.unlock-form label {
+  margin-top: 26px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.unlock-form input {
+  min-width: 0;
+  margin-top: 8px;
+  padding: 13px;
+  border: 1px solid #777;
+  border-radius: 0;
+  font: inherit;
+}
+
+.unlock-form .state-error {
+  color: #a52f27;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.state-spinner {
+  animation: state-spin 1s linear infinite;
+}
+
+@keyframes state-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 800px) {

@@ -12,6 +12,7 @@ export type Flight = {
   arrivalTime: string
   aircraftName: string
   aircraftCode: string
+  tailUrl?: string
   status: 'current' | 'up-next' | 'complete'
 }
 

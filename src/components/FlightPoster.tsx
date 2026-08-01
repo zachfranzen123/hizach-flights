@@ -28,7 +28,16 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
       aria-label={`${flight.airline} flight ${flight.airlineIata} ${flight.flightNumber} poster`}
     >
       <header className="poster-heading">
-        <p className="poster-label">{statusLabel}</p>
+        <div className="poster-status">
+          <p className="poster-label">{statusLabel}</p>
+          {flight.tailUrl && (
+            <img
+              className="poster-tail-mark"
+              src={flight.tailUrl}
+              alt={`${flight.airline} tail artwork`}
+            />
+          )}
+        </div>
         <p className="poster-date">{flight.departureDate}</p>
       </header>
 
