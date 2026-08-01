@@ -51,6 +51,7 @@ function App() {
         <nav aria-label="Primary navigation">
           <a href="#poster">Poster</a>
           <a href="#about">About</a>
+          <a href="/photos">My photos</a>
           <a href="#credits">Credits</a>
         </nav>
       </header>

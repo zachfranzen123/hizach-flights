@@ -33,8 +33,30 @@ type FlightAwareFlight = {
   destination?: { code_iata?: string | null; code?: string | null }
 }
 
+type FrameMode = 'automatic' | 'flight' | 'photo'
+type PhotoTreatment = 'black-and-white' | 'six-color'
+
+type PhotoMetadata = {
+  id: string
+  name: string
+  enabled: boolean
+  treatment: PhotoTreatment
+  createdAt: string
+  updatedAt: string
+}
+
+type FrameSettings = {
+  mode: FrameMode
+  rotation: 'shuffle' | 'ordered'
+  updatedAt: string
+}
+
 const MAX_CALENDAR_BYTES = 1_000_000
 const MAX_UNLOCK_BYTES = 4_096
+const MAX_PHOTO_UPLOAD_BYTES = 8_000_000
+const MAX_PHOTOS = 100
+const PHOTO_METADATA_SUFFIX = '/metadata.json'
+const FRAME_SETTINGS_KEY = 'settings/frame.json'
 const ARTWORK_ALERT_FROM = 'Flight Poster <flight-alerts@hizach.com>'
 const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
 
@@ -84,6 +106,131 @@ function noStoreHeaders(extra: HeadersInit = {}): Headers {
 
 function jsonError(message: string, status: number): Response {
   return Response.json({ error: message }, { status, headers: noStoreHeaders() })
+}
+
+function photoKeys(id: string) {
+  return {
+    display: `photos/${id}/display.jpg`,
+    thumbnail: `photos/${id}/thumbnail.jpg`,
+    metadata: `photos/${id}/metadata.json`,
+  }
+}
+
+function isPhotoId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+async function readR2Json<T>(object: R2ObjectBody | null): Promise<T | null> {
+  if (!object) return null
+  try {
+    return JSON.parse(await object.text()) as T
+  } catch {
+    return null
+  }
+}
+
+async function listPhotos(env: Env): Promise<PhotoMetadata[]> {
+  const listed = await env.PHOTO_BUCKET.list({ prefix: 'photos/', limit: MAX_PHOTOS * 3 })
+  const metadataObjects = listed.objects
+    .filter((object) => object.key.endsWith(PHOTO_METADATA_SUFFIX))
+    .slice(0, MAX_PHOTOS)
+  const photos = await Promise.all(metadataObjects.map(async (object) => {
+    return readR2Json<PhotoMetadata>(await env.PHOTO_BUCKET.get(object.key))
+  }))
+  return photos
+    .filter((photo): photo is PhotoMetadata => Boolean(photo && isPhotoId(photo.id)))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+async function frameSettings(env: Env): Promise<FrameSettings> {
+  const saved = await readR2Json<FrameSettings>(await env.PHOTO_BUCKET.get(FRAME_SETTINGS_KEY))
+  if (saved && ['automatic', 'flight', 'photo'].includes(saved.mode)) return saved
+  return { mode: 'automatic', rotation: 'shuffle', updatedAt: new Date(0).toISOString() }
+}
+
+async function handlePhotoUpload(request: Request, env: Env): Promise<Response> {
+  const declaredLength = Number(request.headers.get('Content-Length') ?? 0)
+  if (declaredLength > MAX_PHOTO_UPLOAD_BYTES) return jsonError('Photo upload is too large', 413)
+
+  const currentCount = (await env.PHOTO_BUCKET.list({ prefix: 'photos/', limit: MAX_PHOTOS * 3 })).objects
+    .filter((object) => object.key.endsWith(PHOTO_METADATA_SUFFIX)).length
+  if (currentCount >= MAX_PHOTOS) return jsonError('Photo library is full', 409)
+
+  let form: FormData
+  try {
+    form = await request.formData()
+  } catch {
+    return jsonError('Invalid photo upload', 400)
+  }
+
+  const display = form.get('display')
+  const thumbnail = form.get('thumbnail')
+  const name = String(form.get('name') ?? 'Untitled photo').trim().slice(0, 160)
+  const treatment = form.get('treatment') === 'six-color' ? 'six-color' : 'black-and-white'
+  if (!(display instanceof File) || !(thumbnail instanceof File)) return jsonError('Display and thumbnail images are required', 400)
+  if (display.type !== 'image/jpeg' || thumbnail.type !== 'image/jpeg') return jsonError('Processed photos must be JPEG images', 415)
+  if (display.size > 6_000_000 || thumbnail.size > 1_000_000) return jsonError('Processed photo is too large', 413)
+
+  const id = crypto.randomUUID()
+  const keys = photoKeys(id)
+  const now = new Date().toISOString()
+  const metadata: PhotoMetadata = { id, name: name || 'Untitled photo', enabled: true, treatment, createdAt: now, updatedAt: now }
+
+  try {
+    await Promise.all([
+      env.PHOTO_BUCKET.put(keys.display, display.stream(), { httpMetadata: { contentType: 'image/jpeg', cacheControl: 'private, no-store' } }),
+      env.PHOTO_BUCKET.put(keys.thumbnail, thumbnail.stream(), { httpMetadata: { contentType: 'image/jpeg', cacheControl: 'private, no-store' } }),
+    ])
+    await env.PHOTO_BUCKET.put(keys.metadata, JSON.stringify(metadata), { httpMetadata: { contentType: 'application/json' } })
+  } catch (error) {
+    await env.PHOTO_BUCKET.delete([keys.display, keys.thumbnail, keys.metadata])
+    throw error
+  }
+
+  return Response.json({ photo: metadata }, { status: 201, headers: noStoreHeaders() })
+}
+
+async function handlePhotoImage(id: string, variant: string, env: Env): Promise<Response> {
+  if (!isPhotoId(id) || !['display', 'thumbnail'].includes(variant)) return jsonError('Invalid photo request', 400)
+  const key = variant === 'thumbnail' ? photoKeys(id).thumbnail : photoKeys(id).display
+  const object = await env.PHOTO_BUCKET.get(key)
+  if (!object) return jsonError('Photo not found', 404)
+  const headers = noStoreHeaders({ 'Content-Type': object.httpMetadata?.contentType ?? 'image/jpeg' })
+  headers.set('ETag', object.httpEtag)
+  return new Response(object.body, { headers })
+}
+
+async function handlePhotoUpdate(id: string, request: Request, env: Env): Promise<Response> {
+  if (!isPhotoId(id)) return jsonError('Invalid photo ID', 400)
+  const keys = photoKeys(id)
+  const metadata = await readR2Json<PhotoMetadata>(await env.PHOTO_BUCKET.get(keys.metadata))
+  if (!metadata) return jsonError('Photo not found', 404)
+  let update: { enabled?: unknown; name?: unknown }
+  try {
+    update = await request.json() as { enabled?: unknown; name?: unknown }
+  } catch {
+    return jsonError('Invalid photo update', 400)
+  }
+  if (typeof update.enabled === 'boolean') metadata.enabled = update.enabled
+  if (typeof update.name === 'string') metadata.name = update.name.trim().slice(0, 160) || metadata.name
+  metadata.updatedAt = new Date().toISOString()
+  await env.PHOTO_BUCKET.put(keys.metadata, JSON.stringify(metadata), { httpMetadata: { contentType: 'application/json' } })
+  return Response.json({ photo: metadata }, { headers: noStoreHeaders() })
+}
+
+async function handleFrameSettingsUpdate(request: Request, env: Env): Promise<Response> {
+  let update: { mode?: unknown; rotation?: unknown }
+  try {
+    update = await request.json() as { mode?: unknown; rotation?: unknown }
+  } catch {
+    return jsonError('Invalid frame settings', 400)
+  }
+  const current = await frameSettings(env)
+  if (typeof update.mode === 'string' && ['automatic', 'flight', 'photo'].includes(update.mode)) current.mode = update.mode as FrameMode
+  if (typeof update.rotation === 'string' && ['shuffle', 'ordered'].includes(update.rotation)) current.rotation = update.rotation as FrameSettings['rotation']
+  current.updatedAt = new Date().toISOString()
+  await env.PHOTO_BUCKET.put(FRAME_SETTINGS_KEY, JSON.stringify(current), { httpMetadata: { contentType: 'application/json' } })
+  return Response.json({ settings: current }, { headers: noStoreHeaders() })
 }
 
 async function timingSafeTokenMatch(candidate: string, expected: string): Promise<boolean> {
@@ -567,6 +714,48 @@ export default {
     }
 
     if (!(await isAuthorized(request, env))) return jsonError('Unauthorized', 401)
+
+    if (request.method === 'GET' && url.pathname === '/api/photos') {
+      try {
+        const [photos, settings] = await Promise.all([listPhotos(env), frameSettings(env)])
+        return Response.json({ photos, settings }, { headers: noStoreHeaders() })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'photo_library_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Photo library unavailable', 502)
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/photos') {
+      try {
+        return await handlePhotoUpload(request, env)
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'photo_upload_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Photo upload failed', 502)
+      }
+    }
+
+    const photoImageMatch = url.pathname.match(/^\/api\/photos\/([^/]+)\/(display|thumbnail)$/)
+    if (request.method === 'GET' && photoImageMatch) {
+      return handlePhotoImage(photoImageMatch[1], photoImageMatch[2], env)
+    }
+
+    const photoMatch = url.pathname.match(/^\/api\/photos\/([^/]+)$/)
+    if (request.method === 'PATCH' && photoMatch) {
+      return handlePhotoUpdate(photoMatch[1], request, env)
+    }
+    if (request.method === 'DELETE' && photoMatch) {
+      if (!isPhotoId(photoMatch[1])) return jsonError('Invalid photo ID', 400)
+      const keys = photoKeys(photoMatch[1])
+      await env.PHOTO_BUCKET.delete([keys.display, keys.thumbnail, keys.metadata])
+      return new Response(null, { status: 204, headers: noStoreHeaders() })
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/frame-settings') {
+      return Response.json({ settings: await frameSettings(env) }, { headers: noStoreHeaders() })
+    }
+    if (request.method === 'PATCH' && url.pathname === '/api/frame-settings') {
+      return handleFrameSettingsUpdate(request, env)
+    }
 
     if (request.method === 'GET' && url.pathname === '/api/next-flight') {
       try {
