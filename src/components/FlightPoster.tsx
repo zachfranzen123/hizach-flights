@@ -79,9 +79,11 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
 
       <footer className="poster-details">
         <div className="poster-detail-primary">
-          <p className="poster-label">AIRCRAFT</p>
+          <p className="poster-label">{flight.aircraftLabel ?? 'Aircraft'}</p>
           <p>{flight.aircraftName}</p>
-          <p className="poster-code">{flight.aircraftCode}</p>
+          <p className="poster-code">
+            {flight.aircraftCode}{flight.aircraftNote ? ` · ${flight.aircraftNote}` : ''}
+          </p>
         </div>
         <div className="poster-detail-route">
           <p className="poster-label">ROUTE</p>
