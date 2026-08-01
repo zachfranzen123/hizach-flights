@@ -2,6 +2,7 @@
 
 type Env = {
   ASSETS: Fetcher
+  PHOTO_BUCKET: R2Bucket
   DISPLAY_ACCESS_TOKEN: string
   FLIGHTY_CALENDAR_ICS_URL: string
   FLIGHTAWARE_AEROAPI_KEY: string
@@ -554,6 +555,7 @@ export default {
             logostream: Boolean(env.LOGOSTREAM_API_KEY),
             resend: Boolean(env.RESEND_API_KEY),
             artworkAlertRecipient: Boolean(env.ARTWORK_ALERT_TO),
+            photoBucket: Boolean(env.PHOTO_BUCKET),
           },
         },
         { headers: noStoreHeaders() },
