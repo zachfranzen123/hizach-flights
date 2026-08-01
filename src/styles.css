@@ -357,6 +357,12 @@ a:focus-visible {
   line-height: 1.55;
 }
 
+.sources-section .project-disclaimer {
+  color: #151515;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .attribution {
   margin: 0;
   justify-self: end;
