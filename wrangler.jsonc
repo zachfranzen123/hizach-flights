@@ -7,6 +7,12 @@
   "triggers": {
     "crons": ["0 17 * * *"]
   },
+  "r2_buckets": [
+    {
+      "binding": "PHOTO_BUCKET",
+      "bucket_name": "hizach-flight-frame-photos"
+    }
+  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
