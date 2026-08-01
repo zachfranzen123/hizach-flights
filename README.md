@@ -1,6 +1,6 @@
 # HiZach / Flights
 
-An artwork-first prototype for `flights.hizach.com`. It turns a Flighty calendar event into a portrait-format flight poster designed for a future 13.3-inch, 1200 × 1600 color e-paper frame.
+A personal, non-commercial project for `flights.hizach.com`. It turns my next Flighty calendar event into a portrait-format poster for a future 13.3-inch, 1200 × 1600 color e-paper frame in my home.
 
 ## Included
 
@@ -25,7 +25,7 @@ npm run build
 
 ## Planned private integrations
 
-The deployed service will use encrypted server-side environment values. Never expose them in browser JavaScript.
+The deployed project will use encrypted server-side environment values. Never expose them in browser JavaScript.
 
 - `FLIGHTY_CALENDAR_ICS_URL`
 - `LOGOSTREAM_API_KEY`
