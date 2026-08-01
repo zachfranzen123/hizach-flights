@@ -286,8 +286,15 @@ async function flightAwareEquipment(
   identity: NonNullable<ReturnType<typeof flightIdentity>>,
   event: ParsedCalendarEvent,
   env: Env,
-): Promise<{ equipment: FlightEquipment | null; registration: string | null }> {
-  if (!env.FLIGHTAWARE_AEROAPI_KEY) return { equipment: null, registration: null }
+): Promise<{
+  equipment: FlightEquipment | null
+  registration: string | null
+  source: 'flightaware-assigned' | 'flightaware-typical' | 'not-yet-available'
+  evidence: { matchingCount: number; totalCount: number } | null
+}> {
+  if (!env.FLIGHTAWARE_AEROAPI_KEY) {
+    return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
+  }
 
   const ident = `${identity.airlineIcao}${identity.flightNumber}`
   const cacheKey = new Request(`https://flightaware-cache.invalid/${ident}`)
@@ -304,7 +311,7 @@ async function flightAwareEquipment(
 
     if (!response.ok) {
       console.error(JSON.stringify({ event: 'flightaware_error', ident, status: response.status }))
-      return { equipment: null, registration: null }
+      return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
     }
 
     response = new Response(response.body, response)
@@ -313,25 +320,49 @@ async function flightAwareEquipment(
   }
 
   const data = await response.json() as { flights?: FlightAwareFlight[] }
-  const matching = (data.flights ?? [])
+  const routeFlights = (data.flights ?? []).filter((candidate) => {
+    const origin = candidate.origin?.code_iata ?? candidate.origin?.code
+    const destination = candidate.destination?.code_iata ?? candidate.destination?.code
+    return (!origin || origin === identity.origin)
+      && (!destination || destination === identity.destination)
+  })
+  const matching = routeFlights
     .map((candidate) => ({
       candidate,
       departure: new Date(candidate.scheduled_out ?? candidate.scheduled_off ?? 0).getTime(),
     }))
-    .filter(({ candidate, departure }) => {
-      const origin = candidate.origin?.code_iata ?? candidate.origin?.code
-      const destination = candidate.destination?.code_iata ?? candidate.destination?.code
+    .filter(({ departure }) => {
       return Number.isFinite(departure)
         && Math.abs(departure - event.start.getTime()) <= 36 * 60 * 60 * 1000
-        && (!origin || origin === identity.origin)
-        && (!destination || destination === identity.destination)
     })
     .sort((a, b) => Math.abs(a.departure - event.start.getTime()) - Math.abs(b.departure - event.start.getTime()))[0]?.candidate
 
-  const code = matching?.aircraft_type?.toUpperCase() ?? null
+  const assignedCode = matching?.aircraft_type?.toUpperCase() ?? null
+  if (assignedCode) {
+    return {
+      equipment: { code: assignedCode, name: equipmentNameByIcao[assignedCode] ?? assignedCode },
+      registration: matching?.registration ?? null,
+      source: 'flightaware-assigned',
+      evidence: null,
+    }
+  }
+
+  const typeCounts = routeFlights.reduce<Record<string, number>>((counts, candidate) => {
+    const code = candidate.aircraft_type?.toUpperCase()
+    if (code) counts[code] = (counts[code] ?? 0) + 1
+    return counts
+  }, {})
+  const typical = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]
+  if (!typical) {
+    return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
+  }
+
+  const [typicalCode, matchingCount] = typical
   return {
-    equipment: code ? { code, name: equipmentNameByIcao[code] ?? code } : null,
-    registration: matching?.registration ?? null,
+    equipment: { code: typicalCode, name: equipmentNameByIcao[typicalCode] ?? typicalCode },
+    registration: null,
+    source: 'flightaware-typical',
+    evidence: { matchingCount, totalCount: routeFlights.filter((flight) => flight.aircraft_type).length },
   }
 }
 
@@ -346,7 +377,7 @@ async function upcomingFlights(env: Env) {
   return Promise.all(upcoming.map(async ({ event, identity }) => {
     const manualEquipment = equipmentByFlight[`${identity.airlineIata}${identity.flightNumber}`] ?? null
     const live = manualEquipment
-      ? { equipment: manualEquipment, registration: null }
+      ? { equipment: manualEquipment, registration: null, source: 'manual-override' as const, evidence: null }
       : await flightAwareEquipment(identity, event, env)
 
     return {
@@ -356,7 +387,8 @@ async function upcomingFlights(env: Env) {
       location: event.location,
       equipment: live.equipment,
       registration: live.registration,
-      equipmentSource: manualEquipment ? 'manual-override' : live.equipment ? 'flightaware' : 'not-yet-available',
+      equipmentSource: live.source,
+      equipmentEvidence: live.evidence,
       tailUrl: `/api/airline-tail/${identity.airlineIcao}`,
     }
   }))
