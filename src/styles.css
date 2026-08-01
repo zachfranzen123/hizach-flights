@@ -250,22 +250,6 @@ a:focus-visible {
   filter: saturate(0.96) contrast(1.03);
 }
 
-.tail-hero-stage {
-  min-height: 0;
-  justify-content: flex-end;
-  overflow: hidden;
-}
-
-.tail-hero-stage .poster-tail-hero {
-  width: auto;
-  max-width: none;
-  height: 91%;
-  margin-right: -7%;
-  object-fit: contain;
-  object-position: right center;
-  filter: saturate(1.02) contrast(1.02);
-}
-
 .poster-details {
   padding-top: 4.5%;
   display: grid;
