@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarDays, FileImage, Frame, LockKeyhole } from 'lucide-react'
+import { CalendarDays, Frame, Plane } from 'lucide-react'
 import { DisplayDialog } from './components/DisplayDialog'
 import { FlightPoster, type PosterPalette } from './components/FlightPoster'
 import { PaletteControl } from './components/PaletteControl'
@@ -15,18 +15,18 @@ const palettes: PosterPalette[] = [
 const workflow = [
   {
     icon: CalendarDays,
-    title: 'Flighty calendar',
-    body: 'Upcoming flights arrive through a private calendar feed.',
+    title: 'The idea',
+    body: 'I wanted the next trip on my Flighty calendar to become something I could hang on a wall.',
   },
   {
-    icon: FileImage,
-    title: 'Poster engine',
-    body: 'Flight number and aircraft type become one quiet piece of art.',
+    icon: Plane,
+    title: 'The artwork',
+    body: 'Each poster pairs the flight details with the aircraft and airline I will actually be flying.',
   },
   {
     icon: Frame,
-    title: 'E-paper display',
-    body: 'The approved poster will refresh on a dedicated 13.3-inch frame.',
+    title: 'The destination',
+    body: 'Eventually this page will live on a 13.3-inch color e-paper frame in my home.',
   },
 ]
 
@@ -47,39 +47,39 @@ function App() {
   return (
     <>
       <header className="site-header">
-        <a className="site-brand" href="#top">HIZACH / FLIGHTS</a>
+        <a className="site-brand" href="#top">ZACH / FLIGHTS</a>
         <nav aria-label="Primary navigation">
           <a href="#poster">Poster</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#sources">Sources</a>
+          <a href="#about">About</a>
+          <a href="#credits">Credits</a>
         </nav>
       </header>
 
       <main id="top">
         <section className="hero" id="poster">
           <div className="hero-copy">
-            <h1>The next<br />flight, framed.</h1>
-            <p className="hero-intro">A living e-paper poster built from my Flighty calendar.</p>
+            <h1>My next<br />flight.</h1>
+            <p className="hero-intro">A personal e-paper display for the flights I’m taking.</p>
             <button className="primary-action" type="button" onClick={() => setDisplayOpen(true)}>
-              <LockKeyhole aria-hidden="true" />
-              Open private display
+              <Frame aria-hidden="true" />
+              View the display
             </button>
-            <p className="hardware-note">Built for a 13.3-inch color e-paper frame.</p>
+            <p className="hardware-note">A personal, non-commercial project for my home.</p>
             <PaletteControl palettes={palettes} selected={paletteIndex} onSelect={setPaletteIndex} />
           </div>
 
           <div className="poster-shell">
-            <p className="sample-label">Sample poster · live calendar connection coming next</p>
+            <p className="sample-label">Personal project · prototype display</p>
             <div className="poster-frame">
               <FlightPoster flight={sampleFlight} palette={palette} />
             </div>
           </div>
         </section>
 
-        <section className="process-section" id="how-it-works">
+        <section className="process-section" id="about">
           <div className="section-heading">
-            <h2>How it works</h2>
-            <p>One flight in. One poster out.</p>
+            <h2>A small personal project.</h2>
+            <p>I’m making this for one screen in my own home.</p>
           </div>
           <div className="process-list">
             {workflow.map(({ icon: Icon, title, body }, index) => (
@@ -95,18 +95,19 @@ function App() {
           </div>
         </section>
 
-        <section className="sources-section" id="sources">
+        <section className="sources-section" id="credits">
           <div>
-            <h2>Sources</h2>
-            <p>Flight details originate in Flighty’s calendar export. Aircraft type data and final artwork integrations will be added behind the private display.</p>
+            <h2>Credits</h2>
+            <p>Flight details come from my Flighty calendar. Airline branding is used only to identify the airline and aircraft shown in my personal itinerary.</p>
+            <p className="project-disclaimer">Personal and non-commercial. This is not a product or service, and it is not affiliated with Flighty, Logostream, Iberia, or any airline.</p>
           </div>
           <p className="attribution">Airline branding via <a href="https://airline.logostream.dev/" target="_blank" rel="noreferrer">Logostream</a>.</p>
         </section>
       </main>
 
       <footer className="site-footer">
-        <p>Personal experiment by <a href="https://www.hizach.com" target="_blank" rel="noreferrer">Zach Franzen</a>.</p>
-        <p>Designed for flights.hizach.com</p>
+        <p>Personal, non-commercial experiment by <a href="https://www.hizach.com" target="_blank" rel="noreferrer">Zach Franzen</a>.</p>
+        <p>Made for one frame at home.</p>
       </footer>
 
       <DisplayDialog
