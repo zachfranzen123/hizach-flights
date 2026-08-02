@@ -1139,7 +1139,7 @@ a:focus-visible {
 }
 
 .annotation-panel { right: -2%; top: 16%; }
-.annotation-frame { left: -6%; bottom: -4%; }
+.annotation-frame { left: 1%; bottom: -11%; }
 
 .journal-section {
   position: relative;
