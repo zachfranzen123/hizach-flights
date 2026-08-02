@@ -205,11 +205,57 @@ a:focus-visible {
 
 .sfo-overlay {
   clip-path: inset(24% 0 19% 0);
-  opacity: 0.92;
+  object-fit: contain;
+  object-position: center;
+  filter: saturate(.88) contrast(1.08);
 }
 
-.sfo-fog {
-  opacity: 0.78;
+.sfo-tower-primary {
+  inset: 19% -5% auto auto;
+  width: auto;
+  height: 70%;
+  opacity: .62;
+}
+
+.sfo-tower-offset {
+  inset: 21% auto auto -8%;
+  width: auto;
+  height: 67%;
+  opacity: .54;
+  transform: scaleX(-1);
+}
+
+.sfo-underpass {
+  inset: 21% auto auto -2%;
+  width: auto;
+  height: 70%;
+  opacity: .52;
+}
+
+.sfo-fog-scene {
+  filter: none;
+}
+
+.sfo-fog-scene img,
+.sfo-fog-scene svg {
+  position: absolute;
+  pointer-events: none;
+}
+
+.sfo-fog-scene img {
+  top: 21%;
+  left: 7%;
+  width: auto;
+  height: 70%;
+  opacity: .46;
+  filter: saturate(.78) contrast(1.06);
+}
+
+.sfo-fog-scene svg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: .76;
 }
 
 .poster-heading {
@@ -1452,20 +1498,3 @@ a:focus-visible {
   .photo-card-info {
     grid-template-columns: 1fr auto;
   }
-
-  .delete-photo {
-    grid-column: 2;
-  }
-
-  .rotation-heading {
-    align-items: start;
-    flex-direction: column;
-  }
-
-  .portal-footer {
-    padding-top: 22px;
-    padding-bottom: 22px;
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
