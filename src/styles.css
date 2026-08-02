@@ -225,13 +225,25 @@ a:focus-visible {
 }
 
 .destination-sfo .poster-details {
+  position: relative;
   min-height: 24cqw;
   margin: 0 -6.2% -6.2%;
   padding: 5% 6.2% 5.3%;
   align-content: center;
   color: #fff7e8;
   background: #6e4f5e;
+  border-top: 0;
   text-shadow: none;
+}
+
+.destination-sfo .poster-details::before {
+  position: absolute;
+  top: 0;
+  right: 6.2%;
+  left: 6.2%;
+  height: 1px;
+  background: #fff7e8;
+  content: "";
 }
 
 .destination-sfo .poster-details .poster-label {
@@ -241,6 +253,10 @@ a:focus-visible {
 .destination-sfo .poster-code,
 .destination-sfo .poster-times {
   color: #f3e7d7;
+}
+
+.destination-sfo .poster-detail-route {
+  border-left-color: #fff7e8;
 }
 
 .poster-heading {
@@ -314,6 +330,7 @@ a:focus-visible {
   display: grid;
   grid-template-columns: 0.86fr 1.14fr;
   column-gap: 8%;
+  border-top: 1px solid var(--poster-fg);
 }
 
 .poster-details > div {
@@ -321,7 +338,8 @@ a:focus-visible {
 }
 
 .poster-detail-route {
-  padding-left: 0;
+  padding-left: 7%;
+  border-left: 1px solid var(--poster-fg);
 }
 
 .poster-details p {
