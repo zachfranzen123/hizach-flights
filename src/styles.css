@@ -259,6 +259,11 @@ a:focus-visible {
   border-left-color: #fff7e8;
 }
 
+.journal-poster-sample .destination-sfo .poster-details,
+.poster-miniature.destination-sfo .poster-details {
+  min-height: 33cqw;
+}
+
 .poster-heading {
   display: flex;
   justify-content: space-between;
