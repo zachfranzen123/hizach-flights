@@ -300,9 +300,9 @@ a:focus-visible {
 }
 
 .sfo-night-bridge {
-  inset: 27% auto auto -7%;
+  inset: 34% auto auto -7%;
   width: auto;
-  height: 70%;
+  height: 64%;
   object-fit: contain;
 }
 
