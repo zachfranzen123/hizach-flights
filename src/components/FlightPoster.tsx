@@ -7,12 +7,22 @@ import alaska737Max8 from '../assets/aircraft/alaska-737-max-8.png'
 import alaska737Max9 from '../assets/aircraft/alaska-737-max-9.png'
 import alaskaE175 from '../assets/aircraft/alaska-e175.png'
 import type { Flight } from '../data/sampleFlight'
+import { DestinationOverlay } from './DestinationOverlay'
 
 export type PosterPalette = {
   name: string
   background: string
   foreground: string
   muted: string
+  decoration: {
+    flowerPrimary: string
+    flowerSecondary: string
+    flowerCenter: string
+    foliage: string
+    leafVein: string
+    bridge: string
+    fog: string
+  }
 }
 
 type FlightPosterProps = {
@@ -45,9 +55,17 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
         '--poster-bg': palette.background,
         '--poster-fg': palette.foreground,
         '--poster-muted': palette.muted,
+        '--overlay-flower-primary': palette.decoration.flowerPrimary,
+        '--overlay-flower-secondary': palette.decoration.flowerSecondary,
+        '--overlay-flower-center': palette.decoration.flowerCenter,
+        '--overlay-foliage': palette.decoration.foliage,
+        '--overlay-leaf-vein': palette.decoration.leafVein,
+        '--overlay-bridge': palette.decoration.bridge,
+        '--overlay-fog': palette.decoration.fog,
       } as React.CSSProperties}
       aria-label={`${flight.airline} flight ${flight.airlineIata} ${flight.flightNumber} poster`}
     >
+      <DestinationOverlay flight={flight} />
       <header className="poster-heading">
         <div className="poster-status">
           <p className="poster-label">{statusLabel}</p>
