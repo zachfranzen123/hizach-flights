@@ -7,7 +7,7 @@ import alaska737Max8 from '../assets/aircraft/alaska-737-max-8.png'
 import alaska737Max9 from '../assets/aircraft/alaska-737-max-9.png'
 import alaskaE175 from '../assets/aircraft/alaska-e175.png'
 import type { Flight } from '../data/sampleFlight'
-import { DestinationOverlay, getSfoVariant } from './DestinationOverlay'
+import { DestinationOverlay } from './DestinationOverlay'
 
 export type PosterPalette = {
   name: string
@@ -47,8 +47,7 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
         A332: iberiaA330,
       }
   const aircraftArtwork = artworkByAircraft[flight.aircraftCode]
-  const sfoVariant = flight.destination === 'SFO' ? getSfoVariant(flight) : null
-  const destinationClass = sfoVariant === null ? '' : `destination-sfo sfo-variant-${sfoVariant}`
+  const destinationClass = flight.destination === 'SFO' ? 'destination-sfo' : ''
 
   return (
     <article

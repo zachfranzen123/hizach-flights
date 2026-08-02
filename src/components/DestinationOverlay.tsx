@@ -1,7 +1,4 @@
 import type { Flight } from '../data/sampleFlight'
-import goldenGateTower from '../assets/destination/golden-gate-tower-poster.webp'
-import goldenGateUnderpass from '../assets/destination/golden-gate-underpass-poster.webp'
-import sfoFogBackground from '../assets/destination/sfo-fog-background.webp'
 import sfoSunriseBackground from '../assets/destination/sfo-sunrise-background.webp'
 
 const hawaiiAirports = new Set([
@@ -22,12 +19,6 @@ function stableVariant(flight: Flight, count: number) {
   let hash = 0
   for (const character of identity) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0
   return Math.abs(hash) % count
-}
-
-export function getSfoVariant(flight: Flight) {
-  return flight.overlayVariant === undefined
-    ? stableVariant(flight, 4)
-    : Math.abs(flight.overlayVariant) % 4
 }
 
 function Plumeria({ transform, scale = 1 }: MotifProps) {
@@ -120,38 +111,7 @@ function HawaiiOverlay({ variant }: { variant: number }) {
   )
 }
 
-function SfoOverlay({ variant }: { variant: number }) {
-  if (variant === 1) {
-    return (
-      <div className="destination-overlay sfo-overlay sfo-fog-background" aria-hidden="true">
-        <img className="sfo-background-art" src={sfoFogBackground} alt="" />
-        <img className="sfo-background-tower" src={goldenGateTower} alt="" />
-      </div>
-    )
-  }
-
-  if (variant === 2) {
-    return (
-      <div className="destination-overlay sfo-overlay sfo-type-background" aria-hidden="true">
-        <div className="sfo-type-field">
-          {Array.from({ length: 10 }, (_, index) => <span key={index}>SAN FRANCISCO</span>)}
-        </div>
-        <img className="sfo-type-tower" src={goldenGateTower} alt="" />
-      </div>
-    )
-  }
-
-  if (variant === 3) {
-    return (
-      <div className="destination-overlay sfo-overlay sfo-night-background" aria-hidden="true">
-        <div className="sfo-night-sun" />
-        <div className="sfo-night-fog sfo-night-fog-one" />
-        <div className="sfo-night-fog sfo-night-fog-two" />
-        <img className="sfo-night-bridge" src={goldenGateUnderpass} alt="" />
-      </div>
-    )
-  }
-
+function SfoOverlay() {
   return (
     <img className="destination-overlay sfo-overlay sfo-sunrise-background" src={sfoSunriseBackground} alt="" aria-hidden="true" />
   )
@@ -166,8 +126,7 @@ export function DestinationOverlay({ flight }: OverlayProps) {
   }
 
   if (flight.destination === 'SFO') {
-    const variant = getSfoVariant(flight)
-    return <SfoOverlay variant={variant} />
+    return <SfoOverlay />
   }
 
   return null

@@ -215,151 +215,23 @@ a:focus-visible {
   object-fit: cover;
 }
 
-.sfo-background-art,
-.sfo-background-tower,
-.sfo-type-tower,
-.sfo-night-bridge {
-  position: absolute;
-  pointer-events: none;
-}
-
-.sfo-background-art {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.sfo-background-tower {
-  top: 28%;
-  right: -9%;
-  width: auto;
-  height: 66%;
-  object-fit: contain;
-}
-
-.sfo-type-background {
-  background: #f7eadc;
-}
-
-.sfo-type-field {
-  position: absolute;
-  inset: 31% -2% auto 3%;
-  display: flex;
-  flex-direction: column;
-  color: #dc5f8e;
-  font-size: 8.3cqw;
-  font-weight: 800;
-  line-height: .88;
-  letter-spacing: -.045em;
-  opacity: .78;
-  white-space: nowrap;
-}
-
-.sfo-type-tower {
-  right: -10%;
-  bottom: 9%;
-  width: auto;
-  height: 61%;
-  object-fit: contain;
-}
-
-.sfo-night-background {
-  background: #102e4d;
-}
-
-.sfo-night-sun {
-  position: absolute;
-  top: 16%;
-  right: 7%;
-  width: 40%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #efb93d;
-}
-
-.sfo-night-fog {
-  position: absolute;
-  left: -8%;
-  width: 116%;
-  border-radius: 50%;
-  background: #507d8b;
-}
-
-.sfo-night-fog-one {
-  top: 52%;
-  height: 11%;
-  transform: rotate(-4deg);
-}
-
-.sfo-night-fog-two {
-  top: 66%;
-  height: 8%;
-  background: #295b70;
-  transform: rotate(3deg);
-}
-
-.sfo-night-bridge {
-  inset: 41% auto auto -7%;
-  width: auto;
-  height: 57%;
-  object-fit: contain;
-}
-
-.destination-sfo.sfo-variant-0 .poster-heading,
-.destination-sfo.sfo-variant-0 .poster-title-block,
-.destination-sfo.sfo-variant-2 .poster-heading,
-.destination-sfo.sfo-variant-2 .poster-title-block,
-.destination-sfo.sfo-variant-2 .poster-details {
+.destination-sfo .poster-heading,
+.destination-sfo .poster-title-block {
   color: #17344d;
 }
 
-.destination-sfo.sfo-variant-0 .poster-date,
-.destination-sfo.sfo-variant-2 .poster-date,
-.destination-sfo.sfo-variant-2 .poster-code,
-.destination-sfo.sfo-variant-2 .poster-times {
+.destination-sfo .poster-date {
   color: #31546b;
 }
 
-.destination-sfo.sfo-variant-0 .poster-details,
-.destination-sfo.sfo-variant-1 .poster-heading,
-.destination-sfo.sfo-variant-1 .poster-title-block,
-.destination-sfo.sfo-variant-1 .poster-details,
-.destination-sfo.sfo-variant-3 .poster-heading,
-.destination-sfo.sfo-variant-3 .poster-title-block,
-.destination-sfo.sfo-variant-3 .poster-details {
+.destination-sfo .poster-details {
   color: #fff7e8;
+  text-shadow: 0 1px 2px rgb(57 35 48 / 55%);
 }
 
-.destination-sfo.sfo-variant-0 .poster-code,
-.destination-sfo.sfo-variant-0 .poster-times,
-.destination-sfo.sfo-variant-1 .poster-date,
-.destination-sfo.sfo-variant-1 .poster-code,
-.destination-sfo.sfo-variant-1 .poster-times,
-.destination-sfo.sfo-variant-3 .poster-date,
-.destination-sfo.sfo-variant-3 .poster-code,
-.destination-sfo.sfo-variant-3 .poster-times {
-  color: #eadfcf;
-}
-
-.destination-sfo.sfo-variant-0 .poster-details,
-.destination-sfo.sfo-variant-1 .poster-details,
-.destination-sfo.sfo-variant-3 .poster-details {
-  border-color: #fff7e8;
-}
-
-.destination-sfo.sfo-variant-0 .poster-detail-route,
-.destination-sfo.sfo-variant-1 .poster-detail-route,
-.destination-sfo.sfo-variant-3 .poster-detail-route {
-  border-color: #fff7e8;
-}
-
-.destination-sfo.sfo-variant-2 .poster-details {
-  border-color: #17344d;
-}
-
-.destination-sfo.sfo-variant-2 .poster-detail-route {
-  border-color: #17344d;
+.destination-sfo .poster-code,
+.destination-sfo .poster-times {
+  color: #f3e7d7;
 }
 
 .poster-heading {
@@ -432,7 +304,7 @@ a:focus-visible {
   padding-top: 4.5%;
   display: grid;
   grid-template-columns: 0.86fr 1.14fr;
-  border-top: 1px solid var(--poster-fg);
+  column-gap: 8%;
 }
 
 .poster-details > div {
@@ -440,8 +312,7 @@ a:focus-visible {
 }
 
 .poster-detail-route {
-  padding-left: 7%;
-  border-left: 1px solid var(--poster-fg);
+  padding-left: 0;
 }
 
 .poster-details p {
