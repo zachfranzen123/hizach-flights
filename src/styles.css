@@ -1293,6 +1293,16 @@ a:focus-visible {
   border: 0;
 }
 
+/* The room mockups are true miniatures. Remove the full-display accessibility
+   minimums so the complete poster scales down instead of being cropped. */
+.poster-miniature .poster-label,
+.poster-miniature .poster-date { font-size: 2.3cqw; }
+.poster-miniature .poster-title-block h2 { font-size: 16cqw; }
+.poster-miniature .poster-title-block > p { font-size: 8.5cqw; }
+.poster-miniature .poster-details div > p:nth-child(2) { font-size: 3.1cqw; }
+.poster-miniature .poster-code,
+.poster-miniature .poster-times { font-size: 1.85cqw; }
+
 .lifestyle-caption {
   min-height: 142px;
   padding: 21px 22px 24px;

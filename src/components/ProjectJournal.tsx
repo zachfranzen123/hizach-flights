@@ -138,7 +138,7 @@ function LifestyleMockup({ scene, label, behavior, flight, palette }: LifestyleM
         <div className="physical-frame" aria-label="Accurate-scale 11 by 14 inch frame mockup">
           <div className="physical-mat">
             <div className="physical-opening">
-              <FlightPoster flight={flight} palette={palette} />
+              <FlightPoster flight={flight} palette={palette} className="poster-miniature" />
             </div>
           </div>
         </div>
