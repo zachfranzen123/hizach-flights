@@ -204,35 +204,35 @@ a:focus-visible {
 }
 
 .sfo-overlay {
-  clip-path: inset(24% 0 19% 0);
   object-fit: contain;
   object-position: center;
   filter: saturate(.88) contrast(1.08);
 }
 
 .sfo-tower-primary {
-  inset: 19% -5% auto auto;
+  inset: 23% -3% auto auto;
   width: auto;
-  height: 70%;
-  opacity: .62;
+  height: 61%;
+  opacity: .7;
 }
 
 .sfo-tower-offset {
-  inset: 21% auto auto -8%;
+  inset: 24% auto auto -5%;
   width: auto;
-  height: 67%;
-  opacity: .54;
+  height: 59%;
+  opacity: .64;
   transform: scaleX(-1);
 }
 
 .sfo-underpass {
-  inset: 21% auto auto -2%;
+  inset: 23% auto auto -6%;
   width: auto;
-  height: 70%;
-  opacity: .52;
+  height: 62%;
+  opacity: .64;
 }
 
 .sfo-fog-scene {
+  clip-path: inset(24% 0 19% 0);
   filter: none;
 }
 
