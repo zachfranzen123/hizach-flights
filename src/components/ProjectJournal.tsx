@@ -19,6 +19,7 @@ import frameBedroomStill from '../assets/demo/frame-bedroom-still.jpg'
 import firstPoster from '../assets/journal/first-poster.webp'
 import flightJson from '../assets/journal/flight-json.webp'
 import flightyCalendar from '../assets/journal/flighty-calendar.webp'
+import lifestyleTriptych from '../assets/journal/lifestyle-triptych.webp'
 import matboardOrder from '../assets/journal/matboard-order.webp'
 import r2Bucket from '../assets/journal/r2-bucket.webp'
 import type { Flight } from '../data/sampleFlight'
@@ -71,7 +72,102 @@ const hardware = [
   },
 ]
 
+const showcasePalettes: PosterPalette[] = [
+  {
+    name: 'Island ochre',
+    background: '#d9a126',
+    foreground: '#17140c',
+    muted: '#514319',
+    decoration: {
+      flowerPrimary: '#a9342b',
+      flowerSecondary: '#fff1c2',
+      flowerCenter: '#6a3a24',
+      foliage: '#244c3e',
+      leafVein: '#a9c09a',
+      bridge: '#7b2e29',
+      fog: '#fff1c2',
+    },
+  },
+  {
+    name: 'Homecoming',
+    background: '#164b91',
+    foreground: '#fffdf5',
+    muted: '#d9e5f4',
+    decoration: {
+      flowerPrimary: '#e95d4f',
+      flowerSecondary: '#fff0c2',
+      flowerCenter: '#e4b536',
+      foliage: '#173f35',
+      leafVein: '#7fa98a',
+      bridge: '#f2b7a5',
+      fog: '#d9e5f4',
+    },
+  },
+  {
+    name: 'Aviation blue',
+    background: '#164b91',
+    foreground: '#fffdf5',
+    muted: '#d9e5f4',
+    decoration: {
+      flowerPrimary: '#e95d4f',
+      flowerSecondary: '#fff0c2',
+      flowerCenter: '#e4b536',
+      foliage: '#173f35',
+      leafVein: '#7fa98a',
+      bridge: '#f2b7a5',
+      fog: '#d9e5f4',
+    },
+  },
+]
+
+type LifestyleMockupProps = {
+  scene: 'bedroom' | 'entry' | 'reading'
+  label: string
+  behavior: string
+  flight: Flight
+  palette: PosterPalette
+}
+
+function LifestyleMockup({ scene, label, behavior, flight, palette }: LifestyleMockupProps) {
+  return (
+    <article className="lifestyle-card">
+      <div
+        className={`lifestyle-scene lifestyle-scene-${scene}`}
+        style={{ '--lifestyle-sheet': `url(${lifestyleTriptych})` } as React.CSSProperties}
+      >
+        <div className="physical-frame" aria-label="Accurate-scale 11 by 14 inch frame mockup">
+          <div className="physical-mat">
+            <div className="physical-opening">
+              <FlightPoster flight={flight} palette={palette} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="lifestyle-caption">
+        <p>{label}</p>
+        <span>{behavior}</span>
+      </div>
+    </article>
+  )
+}
+
 export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: ProjectJournalProps) {
+  const hawaiiFlight: Flight = {
+    ...posterFlight,
+    airline: 'Alaska Airlines', airlineIata: 'AS', airlineIcao: 'ASA', flightNumber: '877',
+    origin: 'SFO', originCity: 'San Francisco', destination: 'HNL', destinationCity: 'Honolulu',
+    departureDate: '12 AUG 2026', departureTime: '09:15 PDT', arrivalTime: '11:42 HST',
+    aircraftName: 'Boeing 737-800', aircraftCode: 'B738', tailUrl: undefined, overlayVariant: 1,
+  }
+  const sfoFlight: Flight = {
+    ...posterFlight,
+    airline: 'Alaska Airlines', airlineIata: 'AS', airlineIcao: 'ASA', flightNumber: '655',
+    origin: 'SEA', originCity: 'Seattle', destination: 'SFO', destinationCity: 'San Francisco',
+    departureDate: '01 AUG 2026', departureTime: '10:47 PDT', arrivalTime: '12:58 PDT',
+    aircraftName: 'Boeing 737-800', aircraftCode: 'B738', tailUrl: undefined, overlayVariant: 0,
+  }
+  const classicFlight: Flight = { ...posterFlight, tailUrl: undefined }
+
   return (
     <>
       <header className="journal-header">
@@ -141,8 +237,52 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
           </div>
         </section>
 
-        <section className="journal-section system-section" id="system">
+        <section className="journal-section lifestyle-section" id="in-the-room">
           <div className="section-index">02</div>
+          <div className="journal-section-heading split-heading">
+            <div>
+              <p className="journal-eyebrow">THE DISPLAY IN REAL LIFE</p>
+              <h2>One frame. A different mood for every trip.</h2>
+            </div>
+            <p>The frame remains physically honest in every scene: 11 × 14 inches, with a 7⅞ × 10½-inch visible opening. Only the digital artwork changes.</p>
+          </div>
+
+          <div className="lifestyle-grid">
+            <LifestyleMockup
+              scene="bedroom"
+              label="SFO → HNL · ISLAND OCHRE"
+              behavior="Hawai‘i trips add bold plumeria, hibiscus and tropical foliage tuned for the six-color screen."
+              flight={hawaiiFlight}
+              palette={showcasePalettes[0]}
+            />
+            <LifestyleMockup
+              scene="entry"
+              label="SEA → SFO · HOMECOMING"
+              behavior="Arrivals into my home airport switch to a rotating Golden Gate background treatment."
+              flight={sfoFlight}
+              palette={showcasePalettes[1]}
+            />
+            <LifestyleMockup
+              scene="reading"
+              label="SFO → MAD · AVIATION BLUE"
+              behavior="Everywhere else uses the quieter poster system: aircraft, route and a strong field of color."
+              flight={classicFlight}
+              palette={showcasePalettes[2]}
+            />
+          </div>
+
+          <div className="scale-note" aria-label="Physical frame dimensions">
+            <span>TRUE PROPORTIONS</span>
+            <p><b>11 × 14″</b> outside frame</p>
+            <i aria-hidden="true" />
+            <p><b>7⅞ × 10½″</b> visible display</p>
+            <i aria-hidden="true" />
+            <p><b>3:4</b> live poster ratio</p>
+          </div>
+        </section>
+
+        <section className="journal-section system-section" id="system">
+          <div className="section-index">03</div>
           <div className="journal-section-heading split-heading">
             <div>
               <p className="journal-eyebrow">THE SOFTWARE</p>
@@ -196,7 +336,7 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
         </section>
 
         <section className="journal-section rules-section">
-          <div className="section-index">03</div>
+          <div className="section-index">04</div>
           <div className="rules-layout">
             <div className="journal-section-heading">
               <p className="journal-eyebrow">THE AUTOMATION RULES</p>
@@ -221,7 +361,7 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
         </section>
 
         <section className="journal-section build-section" id="build">
-          <div className="section-index">04</div>
+          <div className="section-index">05</div>
           <div className="journal-section-heading split-heading">
             <div>
               <p className="journal-eyebrow">BUILD LOG</p>
@@ -285,7 +425,7 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
         </section>
 
         <section className="journal-section hardware-section">
-          <div className="section-index">05</div>
+          <div className="section-index">06</div>
           <div className="journal-section-heading split-heading">
             <div>
               <p className="journal-eyebrow">THE PHYSICAL BUILD</p>
