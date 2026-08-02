@@ -1098,6 +1098,7 @@ a:focus-visible {
 
 .journal-room-image img {
   width: 100%;
+  height: auto;
   display: block;
   filter: saturate(.88) contrast(1.02);
 }
@@ -1200,7 +1201,7 @@ a:focus-visible {
 }
 
 .document-shot { margin: 0; }
-.document-shot img { width: 100%; display: block; border: 1px solid var(--journal-rule); }
+.document-shot img { width: 100%; height: auto; display: block; border: 1px solid var(--journal-rule); }
 .document-shot figcaption { display: flex; justify-content: space-between; color: #5a5e5c; }
 .document-shot figcaption span { color: var(--journal-orange); font-weight: 800; }
 
@@ -1249,7 +1250,7 @@ a:focus-visible {
 .integration-grid p { margin: 0; color: #4f5351; font-size: 14px; line-height: 1.55; }
 
 .json-strip { margin: 72px 0 26px; }
-.json-strip img { width: 100%; min-height: 92px; object-fit: cover; object-position: left top; display: block; border: 1px solid #343839; background: #111; }
+.json-strip img { width: 100%; height: auto; min-height: 92px; object-fit: cover; object-position: left top; display: block; border: 1px solid #343839; background: #111; }
 .json-strip figcaption { margin-top: 9px; font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .09em; }
 
 .code-notebook { margin-top: 48px; border-top: 1px solid var(--journal-ink); }
@@ -1294,7 +1295,7 @@ a:focus-visible {
 
 .media-wall { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(220px, .46fr) minmax(240px, .54fr); gap: 28px; align-items: start; }
 .media-wall figure { margin: 0; }
-.media-wall img { width: 100%; display: block; }
+.media-wall img { width: 100%; height: auto; display: block; }
 .media-wall-room { padding: 12px; border: 1px solid var(--journal-ink); }
 .media-wall-r2 { max-height: 590px; padding: 12px; overflow: hidden; border: 1px solid var(--journal-rule); background: #f5f4ee; }
 .media-note { align-self: end; padding: 32px 0; border-top: 6px solid var(--journal-orange); }
@@ -1390,8 +1391,21 @@ a:focus-visible {
   .journal-dek { font-size: 18px; }
   .journal-actions { align-items: flex-start; flex-direction: column; }
   .journal-status { grid-template-columns: 54px 1fr; }
-  .journal-hero-visual { min-height: 390px; }
-  .journal-poster-sample { bottom: -4%; width: 34%; padding: 4px; }
+  .journal-hero-visual {
+    min-height: 0;
+    padding-bottom: 28px;
+  }
+  .journal-room-image {
+    position: relative;
+    inset: auto;
+  }
+  .journal-poster-sample {
+    right: 2%;
+    bottom: 0;
+    width: 31%;
+    padding: 4px;
+    box-shadow: 7px 8px 0 rgba(12, 17, 23, .12);
+  }
   .annotation { display: none; }
   .journal-section-heading h2, .journal-cta h2 { font-size: 50px; }
   .document-shot figcaption { gap: 12px; flex-direction: column; }
