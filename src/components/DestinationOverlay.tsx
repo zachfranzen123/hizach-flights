@@ -1,6 +1,6 @@
 import type { Flight } from '../data/sampleFlight'
-import goldenGateTower from '../assets/destination/golden-gate-tower.webp'
-import goldenGateUnderpass from '../assets/destination/golden-gate-underpass.webp'
+import goldenGateTower from '../assets/destination/golden-gate-tower-poster.webp'
+import goldenGateUnderpass from '../assets/destination/golden-gate-underpass-poster.webp'
 
 const hawaiiAirports = new Set([
   'HNL', 'OGG', 'KOA', 'LIH', 'ITO', 'MKK', 'LNY', 'JHM', 'HNM',
