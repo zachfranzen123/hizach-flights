@@ -229,10 +229,11 @@ a:focus-visible {
   width: auto;
   height: 62%;
   opacity: .64;
+  clip-path: inset(14% 0 6% 0);
 }
 
 .sfo-fog-scene {
-  clip-path: inset(24% 0 19% 0);
+  clip-path: inset(31% 0 19% 0);
   filter: none;
 }
 
@@ -1497,4 +1498,3 @@ a:focus-visible {
 
   .photo-card-info {
     grid-template-columns: 1fr auto;
-  }
