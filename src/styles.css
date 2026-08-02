@@ -1393,18 +1393,14 @@ a:focus-visible {
   .journal-status { grid-template-columns: 54px 1fr; }
   .journal-hero-visual {
     min-height: 0;
-    padding-bottom: 28px;
+    padding-bottom: 0;
   }
   .journal-room-image {
     position: relative;
     inset: auto;
   }
   .journal-poster-sample {
-    right: 2%;
-    bottom: 0;
-    width: 31%;
-    padding: 4px;
-    box-shadow: 7px 8px 0 rgba(12, 17, 23, .12);
+    display: none;
   }
   .annotation { display: none; }
   .journal-section-heading h2, .journal-cta h2 { font-size: 50px; }
