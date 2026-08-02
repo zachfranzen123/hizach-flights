@@ -1661,3 +1661,4 @@ a:focus-visible {
   max-width: 900px;
   margin: 13px 0 8px;
   font: 400 clamp(54px, 7.7vw, 110px)/.9 Georgia, serif;
+}
