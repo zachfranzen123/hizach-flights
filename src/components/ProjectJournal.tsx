@@ -92,7 +92,7 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
           <div className="journal-hero-copy">
             <p className="journal-eyebrow">A PERSONAL HARDWARE + SOFTWARE PROJECT</p>
             <h1>Building a flight poster that knows where I’m going.</h1>
-            <p className="journal-dek">I’m a flight attendant building one living e-paper frame for my bedroom. It reads my real trips, finds the likely aircraft, and becomes a photo frame again when I’m home.</p>
+            <p className="journal-dek">I’m a flight attendant and aviation geek building one living e-paper frame for home. It turns my upcoming trips into aviation art—and lets my household see where in the world I am.</p>
             <div className="journal-actions">
               <button className="journal-primary" type="button" onClick={onOpenDisplay}>
                 View the live display <ArrowRight aria-hidden="true" />
@@ -122,22 +122,22 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
           <div className="section-index">01</div>
           <div className="journal-section-heading">
             <p className="journal-eyebrow">THE IDEA</p>
-            <h2>The idea started with a calendar.</h2>
-            <p>Flighty already puts every trip I’m working into a private Google Calendar. That tiny calendar event—flight number, route, departure and arrival—became the reliable starting point for the whole project.</p>
+            <h2>A creative way to bring my trips home.</h2>
+            <p>I spend a lot of time in airplanes and a lot of time thinking about them. I wanted an object at home that felt more like aviation art than a flight tracker: visually appealing, personal, and useful to the people who want to know where I am.</p>
           </div>
           <div className="story-grid">
-            <figure className="document-shot calendar-shot">
-              <img src={flightyCalendar} alt="Actual Flighty-synced Google Calendar event for Iberia flight 356" width="1400" height="995" loading="lazy" />
-              <figcaption><span>ACTUAL INPUT</span> Flighty → my private Google Calendar</figcaption>
-            </figure>
             <div className="story-notes">
-              <blockquote>“What if the next trip on my calendar became something worth hanging on the wall?”</blockquote>
-              <p>The first version was deliberately simple: one flight, one aircraft, one bold field of color. From there it grew into a private display with live calendar data, aircraft history, destination artwork, and a photo mode.</p>
+              <blockquote>“Where am I flying next—and how can that information become something beautiful?”</blockquote>
+              <p>The poster is aviation artwork first: one flight, the aircraft I’ll likely be working or riding on, a bold field of color, and destination details. Behind it, live data quietly keeps everything accurate. After I land, the frame returns to photographs instead of becoming another blank screen.</p>
               <figure className="document-shot first-poster-shot">
                 <img src={firstPoster} alt="Early blue Iberia flight poster prototype" width="760" height="1054" loading="lazy" />
                 <figcaption><span>ITERATION 01</span> The first live poster</figcaption>
               </figure>
             </div>
+            <figure className="document-shot calendar-shot">
+              <img src={flightyCalendar} alt="Flighty-synced Google Calendar event supplying the itinerary behind a poster" width="1400" height="995" loading="lazy" />
+              <figcaption><span>BEHIND THE ART</span> Flighty keeps the itinerary current</figcaption>
+            </figure>
           </div>
         </section>
 
@@ -146,7 +146,7 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
           <div className="journal-section-heading split-heading">
             <div>
               <p className="journal-eyebrow">THE SOFTWARE</p>
-              <h2>How a calendar event becomes a poster.</h2>
+              <h2>How an upcoming trip becomes a poster.</h2>
             </div>
             <p>The browser never sees private credentials. A Cloudflare Worker fetches and interprets the calendar, enriches the flight, proxies licensed airline marks, and returns only the display data.</p>
           </div>
