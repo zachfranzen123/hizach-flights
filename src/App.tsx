@@ -69,8 +69,8 @@ const previewFlights = {
     departureDate: '14 AUG 2026',
     departureTime: '13:15 HST',
     arrivalTime: '21:32 PDT',
-    aircraftName: 'Boeing 737 MAX 9',
-    aircraftCode: 'B39M',
+    aircraftName: 'Boeing 737-800',
+    aircraftCode: 'B738',
   },
   'sfo-jfk': {
     ...sampleFlight,
@@ -85,8 +85,8 @@ const previewFlights = {
     departureDate: '22 AUG 2026',
     departureTime: '09:30 EDT',
     arrivalTime: '12:58 PDT',
-    aircraftName: 'Boeing 737 MAX 8',
-    aircraftCode: 'B38M',
+    aircraftName: 'Boeing 737-800',
+    aircraftCode: 'B738',
   },
 } satisfies Record<string, typeof sampleFlight>
 
