@@ -15,6 +15,7 @@ export type Flight = {
   aircraftLabel?: string
   aircraftNote?: string
   tailUrl?: string
+  overlayVariant?: number
   status: 'current' | 'up-next' | 'complete'
 }
 

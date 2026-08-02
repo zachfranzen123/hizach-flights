@@ -151,12 +151,16 @@ function SfoOverlay({ variant }: { variant: number }) {
 }
 
 export function DestinationOverlay({ flight }: OverlayProps) {
+  const requestedVariant = flight.overlayVariant
+
   if (hawaiiAirports.has(flight.destination)) {
-    return <HawaiiOverlay variant={stableVariant(flight, 3)} />
+    const variant = requestedVariant === undefined ? stableVariant(flight, 3) : Math.abs(requestedVariant) % 3
+    return <HawaiiOverlay variant={variant} />
   }
 
   if (flight.destination === 'SFO') {
-    return <SfoOverlay variant={stableVariant(flight, 4)} />
+    const variant = requestedVariant === undefined ? stableVariant(flight, 4) : Math.abs(requestedVariant) % 4
+    return <SfoOverlay variant={variant} />
   }
 
   return null

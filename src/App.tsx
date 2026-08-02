@@ -83,8 +83,13 @@ function App() {
   const [paletteIndex, setPaletteIndex] = useState(0)
   const [displayOpen, setDisplayOpen] = useState(false)
   const palette = palettes[paletteIndex]
-  const previewKey = new URLSearchParams(window.location.search).get('preview') ?? ''
-  const posterFlight = previewFlights[previewKey as keyof typeof previewFlights] ?? sampleFlight
+  const previewParams = new URLSearchParams(window.location.search)
+  const previewKey = previewParams.get('preview') ?? ''
+  const previewVariant = Number.parseInt(previewParams.get('variant') ?? '', 10)
+  const previewFlight = previewFlights[previewKey as keyof typeof previewFlights]
+  const posterFlight = previewFlight && Number.isFinite(previewVariant)
+    ? { ...previewFlight, overlayVariant: previewVariant }
+    : previewFlight ?? sampleFlight
 
   useEffect(() => {
     if (!displayOpen) return
