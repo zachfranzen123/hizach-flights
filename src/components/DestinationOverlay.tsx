@@ -1,4 +1,7 @@
 import type { Flight } from '../data/sampleFlight'
+import goldenGateTowerPoster from '../assets/destination/golden-gate-tower-poster.webp'
+import goldenGateUnderpassPoster from '../assets/destination/golden-gate-underpass-poster.webp'
+import sfoFogBackground from '../assets/destination/sfo-fog-background.webp'
 import sfoSunriseBackground from '../assets/destination/sfo-sunrise-background.webp'
 
 const hawaiiAirports = new Set([
@@ -111,10 +114,25 @@ function HawaiiOverlay({ variant }: { variant: number }) {
   )
 }
 
-function SfoOverlay() {
-  return (
-    <img className="destination-overlay sfo-overlay sfo-sunrise-background" src={sfoSunriseBackground} alt="" aria-hidden="true" />
-  )
+function SfoOverlay({ variant }: { variant: number }) {
+  if (variant === 1) {
+    return (
+      <div className="destination-overlay sfo-overlay sfo-scene sfo-scene-fog" aria-hidden="true">
+        <img src={sfoFogBackground} alt="" />
+        <img src={goldenGateTowerPoster} alt="" />
+      </div>
+    )
+  }
+
+  if (variant === 2) {
+    return (
+      <div className="destination-overlay sfo-overlay sfo-scene sfo-scene-underpass" aria-hidden="true">
+        <img src={goldenGateUnderpassPoster} alt="" />
+      </div>
+    )
+  }
+
+  return <img className="destination-overlay sfo-overlay sfo-sunrise-background" src={sfoSunriseBackground} alt="" aria-hidden="true" />
 }
 
 export function DestinationOverlay({ flight }: OverlayProps) {
@@ -126,7 +144,8 @@ export function DestinationOverlay({ flight }: OverlayProps) {
   }
 
   if (flight.destination === 'SFO') {
-    return <SfoOverlay />
+    const variant = requestedVariant === undefined ? stableVariant(flight, 3) : Math.abs(requestedVariant) % 3
+    return <SfoOverlay variant={variant} />
   }
 
   return null
