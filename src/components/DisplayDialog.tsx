@@ -39,9 +39,19 @@ type DisplayPhase = 'loading' | 'locked' | 'ready' | 'empty' | 'error'
 
 const airportDetails: Record<string, { city: string; timeZone: string }> = {
   BIO: { city: 'Bilbao', timeZone: 'Europe/Madrid' },
+  BUR: { city: 'Burbank', timeZone: 'America/Los_Angeles' },
+  HNL: { city: 'Honolulu', timeZone: 'Pacific/Honolulu' },
+  JFK: { city: 'New York', timeZone: 'America/New_York' },
+  KOA: { city: 'Kona', timeZone: 'Pacific/Honolulu' },
+  LAX: { city: 'Los Angeles', timeZone: 'America/Los_Angeles' },
+  LIH: { city: 'Lihue', timeZone: 'Pacific/Honolulu' },
   MAD: { city: 'Madrid', timeZone: 'Europe/Madrid' },
+  OGG: { city: 'Maui', timeZone: 'Pacific/Honolulu' },
+  PDX: { city: 'Portland', timeZone: 'America/Los_Angeles' },
   SEA: { city: 'Seattle', timeZone: 'America/Los_Angeles' },
   SFO: { city: 'San Francisco', timeZone: 'America/Los_Angeles' },
+  SNA: { city: 'Santa Ana', timeZone: 'America/Los_Angeles' },
+  SAN: { city: 'San Diego', timeZone: 'America/Los_Angeles' },
 }
 
 function dateLabel(iso: string, timeZone: string): string {
