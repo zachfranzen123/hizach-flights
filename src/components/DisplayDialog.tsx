@@ -258,38 +258,3 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
             value={token}
             onChange={(event) => setToken(event.target.value)}
             autoComplete="current-password"
-            autoFocus
-          />
-          {message && <p className="state-error" role="alert">{message}</p>}
-          <button type="submit">Unlock my display</button>
-        </form>
-      )}
-
-      {phase === 'empty' && (
-        <div className="display-state">
-          <h2>No upcoming flight</h2>
-          <p>My Flighty calendar does not currently contain a future flight.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setLiveFlights([flight])
-              setFlightIndex(0)
-              setPhase('ready')
-            }}
-          >
-            View sample poster
-          </button>
-        </div>
-      )}
-
-      {phase === 'error' && (
-        <div className="display-state">
-          <RefreshCw aria-hidden="true" />
-          <h2>Couldn’t load the display</h2>
-          <p>{message}</p>
-          <button type="button" onClick={() => void loadFlight()}>Try again</button>
-        </div>
-      )}
-    </div>
-  )
-}
