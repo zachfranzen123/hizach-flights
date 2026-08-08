@@ -25,11 +25,16 @@ import r2Bucket from '../assets/journal/r2-bucket.webp'
 import type { Flight } from '../data/sampleFlight'
 import { CodeNotebook } from './CodeNotebook'
 import { FlightPoster, type PosterPalette } from './FlightPoster'
+import { PaletteControl } from './PaletteControl'
 
 type ProjectJournalProps = {
   onOpenDisplay: () => void
   posterFlight: Flight
   palette: PosterPalette
+  palettes: PosterPalette[]
+  selectedPalette: number
+  onSelectPalette: (index: number) => void
+  onRandomizePalette: () => void
 }
 
 const pipeline = [
@@ -151,7 +156,7 @@ function LifestyleMockup({ scene, label, behavior, flight, palette }: LifestyleM
   )
 }
 
-export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: ProjectJournalProps) {
+export function ProjectJournal({ onOpenDisplay, posterFlight, palette, palettes, selectedPalette, onSelectPalette, onRandomizePalette }: ProjectJournalProps) {
   const hawaiiFlight: Flight = {
     ...posterFlight,
     airline: 'Alaska Airlines', airlineIata: 'AS', airlineIcao: 'ASA', flightNumber: '877',
@@ -199,6 +204,12 @@ export function ProjectJournal({ onOpenDisplay, posterFlight, palette }: Project
               <span>NOW</span>
               <p><i aria-hidden="true" /> Panel, controller &amp; matboard ordered</p>
             </div>
+            <PaletteControl
+              palettes={palettes}
+              selected={selectedPalette}
+              onSelect={onSelectPalette}
+              onRandomize={onRandomizePalette}
+            />
           </div>
 
           <div className="journal-hero-visual">
