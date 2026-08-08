@@ -4,9 +4,10 @@ type PaletteControlProps = {
   palettes: PosterPalette[]
   selected: number
   onSelect: (index: number) => void
+  onRandomize: () => void
 }
 
-export function PaletteControl({ palettes, selected, onSelect }: PaletteControlProps) {
+export function PaletteControl({ palettes, selected, onSelect, onRandomize }: PaletteControlProps) {
   return (
     <div className="palette-control" aria-label="Poster background color">
       <span>Background</span>
@@ -22,6 +23,9 @@ export function PaletteControl({ palettes, selected, onSelect }: PaletteControlP
             onClick={() => onSelect(index)}
           />
         ))}
+        <button className="palette-random" type="button" onClick={onRandomize} aria-label="Choose a random background color">
+          Random
+        </button>
       </div>
     </div>
   )
