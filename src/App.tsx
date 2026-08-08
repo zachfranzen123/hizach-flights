@@ -66,10 +66,11 @@ function App() {
   const previewKey = previewParams.get('preview') ?? ''
   const previewVariant = Number.parseInt(previewParams.get('variant') ?? '', 10)
   const requestedPalette = Number.parseInt(previewParams.get('palette') ?? '', 10)
-  const paletteIndex = Number.isInteger(requestedPalette) && requestedPalette >= 0 && requestedPalette < palettes.length
+  const initialPaletteIndex = Number.isInteger(requestedPalette) && requestedPalette >= 0 && requestedPalette < palettes.length
     ? requestedPalette
     : 0
   const [displayOpen, setDisplayOpen] = useState(false)
+  const [paletteIndex, setPaletteIndex] = useState(initialPaletteIndex)
   const palette = palettes[paletteIndex]
   const previewFlight = previewFlights[previewKey as keyof typeof previewFlights]
   const posterFlight = previewFlight && Number.isFinite(previewVariant)
@@ -87,7 +88,18 @@ function App() {
 
   return (
     <>
-      <ProjectJournal onOpenDisplay={() => setDisplayOpen(true)} posterFlight={posterFlight} palette={palette} />
+      <ProjectJournal
+        onOpenDisplay={() => setDisplayOpen(true)}
+        posterFlight={posterFlight}
+        palette={palette}
+        palettes={palettes}
+        selectedPalette={paletteIndex}
+        onSelectPalette={setPaletteIndex}
+        onRandomizePalette={() => {
+          const choices = palettes.map((_, index) => index).filter((index) => index !== paletteIndex)
+          setPaletteIndex(choices[Math.floor(Math.random() * choices.length)] ?? paletteIndex)
+        }}
+      />
       <DisplayDialog
         open={displayOpen}
         onClose={() => setDisplayOpen(false)}
