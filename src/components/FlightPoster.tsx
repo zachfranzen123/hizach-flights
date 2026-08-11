@@ -1,8 +1,7 @@
 import iberiaA330 from '../assets/iberia-a330.png'
 import iberiaA319 from '../assets/aircraft/iberia-a319.png'
 import iberiaA320 from '../assets/aircraft/iberia-a320.png'
-
-// Keep airline-specific artwork explicit so every supported aircraft renders a poster asset.
+import iberiaA321 from '../assets/aircraft/iberia-a321.png'
 import alaska737700 from '../assets/aircraft/alaska-737-700.png'
 import alaska737800 from '../assets/aircraft/alaska-737-800.png'
 import alaska737900er from '../assets/aircraft/alaska-737-900er.png'
@@ -48,6 +47,7 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
     : {
         A319: iberiaA319,
         A320: iberiaA320,
+        A321: iberiaA321,
         A332: iberiaA330,
       }
   const aircraftArtwork = artworkByAircraft[flight.aircraftCode]
