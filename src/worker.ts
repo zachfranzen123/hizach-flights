@@ -758,3 +758,78 @@ export default {
       return handleFrameSettingsUpdate(request, env)
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/next-flight') {
+      try {
+        return Response.json({ flight: await nextFlight(env) }, { headers: noStoreHeaders() })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'calendar_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Calendar unavailable', 502)
+      }
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/upcoming-flights') {
+      try {
+        return Response.json({ flights: await upcomingFlights(env) }, { headers: noStoreHeaders() })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'upcoming_flights_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Upcoming flights unavailable', 502)
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/test-artwork-alert') {
+      try {
+        return Response.json(await sendMissingArtworkAlert(env), { headers: noStoreHeaders() })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'artwork_alert_test_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Artwork alert failed', 502)
+      }
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/calendar-preview') {
+      try {
+        const now = Date.now()
+        const events = (await calendarEvents(env))
+          .sort((a, b) => a.start.getTime() - b.start.getTime())
+          .slice(0, 20)
+          .map((event) => ({
+            summary: event.summary,
+            start: event.start.toISOString(),
+            end: event.end.toISOString(),
+            upcoming: event.end.getTime() >= now,
+            identity: flightIdentity(event),
+          }))
+        return Response.json(
+          { now: new Date(now).toISOString(), events },
+          { headers: noStoreHeaders() },
+        )
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'calendar_preview_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Calendar unavailable', 502)
+      }
+    }
+
+    const tailMatch = url.pathname.match(/^\/api\/airline-tail\/([A-Z0-9]{3})$/)
+    if (request.method === 'GET' && tailMatch) {
+      return handleTail(tailMatch[1], env)
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/lock') {
+      return Response.json(
+        { ok: true },
+        {
+          headers: noStoreHeaders({
+            'Set-Cookie': 'hizach_display=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0',
+          }),
+        },
+      )
+    }
+
+    return jsonError('Not found', 404)
+  },
+
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(sendMissingArtworkAlert(env).catch((error) => {
+      console.error(JSON.stringify({ event: 'artwork_alert_scheduled_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+    }))
+  },
+} satisfies ExportedHandler<Env>
