@@ -698,3 +698,63 @@ export default {
           purpose: 'personal-non-commercial',
           integrations: {
             displayToken: Boolean(env.DISPLAY_ACCESS_TOKEN),
+            flightyCalendar: Boolean(env.FLIGHTY_CALENDAR_ICS_URL),
+            flightaware: Boolean(env.FLIGHTAWARE_AEROAPI_KEY),
+            logostream: Boolean(env.LOGOSTREAM_API_KEY),
+            resend: Boolean(env.RESEND_API_KEY),
+            artworkAlertRecipient: Boolean(env.ARTWORK_ALERT_TO),
+            photoBucket: Boolean(env.PHOTO_BUCKET),
+          },
+        },
+        { headers: noStoreHeaders() },
+      )
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/unlock') {
+      return handleUnlock(request, env)
+    }
+
+    if (!(await isAuthorized(request, env))) return jsonError('Unauthorized', 401)
+
+    if (request.method === 'GET' && url.pathname === '/api/photos') {
+      try {
+        const [photos, settings] = await Promise.all([listPhotos(env), frameSettings(env)])
+        return Response.json({ photos, settings }, { headers: noStoreHeaders() })
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'photo_library_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Photo library unavailable', 502)
+      }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/photos') {
+      try {
+        return await handlePhotoUpload(request, env)
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'photo_upload_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Photo upload failed', 502)
+      }
+    }
+
+    const photoImageMatch = url.pathname.match(/^\/api\/photos\/([^/]+)\/(display|thumbnail)$/)
+    if (request.method === 'GET' && photoImageMatch) {
+      return handlePhotoImage(photoImageMatch[1], photoImageMatch[2], env)
+    }
+
+    const photoMatch = url.pathname.match(/^\/api\/photos\/([^/]+)$/)
+    if (request.method === 'PATCH' && photoMatch) {
+      return handlePhotoUpdate(photoMatch[1], request, env)
+    }
+    if (request.method === 'DELETE' && photoMatch) {
+      if (!isPhotoId(photoMatch[1])) return jsonError('Invalid photo ID', 400)
+      const keys = photoKeys(photoMatch[1])
+      await env.PHOTO_BUCKET.delete([keys.display, keys.thumbnail, keys.metadata])
+      return new Response(null, { status: 204, headers: noStoreHeaders() })
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/frame-settings') {
+      return Response.json({ settings: await frameSettings(env) }, { headers: noStoreHeaders() })
+    }
+    if (request.method === 'PATCH' && url.pathname === '/api/frame-settings') {
+      return handleFrameSettingsUpdate(request, env)
+    }
+
