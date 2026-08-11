@@ -1,5 +1,6 @@
 import iberiaA330 from '../assets/iberia-a330.png'
 import iberiaA319 from '../assets/aircraft/iberia-a319.png'
+import iberiaA320 from '../assets/aircraft/iberia-a320.png'
 import alaska737700 from '../assets/aircraft/alaska-737-700.png'
 import alaska737800 from '../assets/aircraft/alaska-737-800.png'
 import alaska737900er from '../assets/aircraft/alaska-737-900er.png'
@@ -44,6 +45,7 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
       }
     : {
         A319: iberiaA319,
+        A320: iberiaA320,
         A332: iberiaA330,
       }
   const aircraftArtwork = artworkByAircraft[flight.aircraftCode]

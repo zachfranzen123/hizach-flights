@@ -62,7 +62,7 @@ const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
 
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L']),
-  IB: new Set(['A319', 'A332']),
+  IB: new Set(['A319', 'A320', 'A332']),
 }
 
 const airlineIcaoByIata: Record<string, string> = {
