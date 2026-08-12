@@ -42,6 +42,7 @@ const airportDetails: Record<string, { city: string; timeZone: string }> = {
   BOI: { city: 'Boise', timeZone: 'America/Boise' },
   BOS: { city: 'Boston', timeZone: 'America/New_York' },
   BIO: { city: 'Bilbao', timeZone: 'Europe/Madrid' },
+  BCN: { city: 'Barcelona', timeZone: 'Europe/Madrid' },
   BUR: { city: 'Burbank', timeZone: 'America/Los_Angeles' },
   DCA: { city: 'Washington', timeZone: 'America/New_York' },
   DEN: { city: 'Denver', timeZone: 'America/Denver' },
