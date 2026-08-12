@@ -64,18 +64,21 @@ const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L']),
   IB: new Set(['A319', 'A320', 'A321', 'A332']),
+  VY: new Set(['A21N']),
 }
 
 const airlineIcaoByIata: Record<string, string> = {
   AF: 'AFR',
   AS: 'ASA',
   IB: 'IBE',
+  VY: 'VLG',
 }
 
 const airlineNameByIata: Record<string, string> = {
   AF: 'Air France',
   AS: 'Alaska Airlines',
   IB: 'Iberia',
+  VY: 'Vueling',
 }
 
 const equipmentByFlight: Record<string, FlightEquipment> = {
@@ -86,6 +89,7 @@ const equipmentNameByIcao: Record<string, string> = {
   A319: 'Airbus A319',
   A320: 'Airbus A320',
   A321: 'Airbus A321',
+  A21N: 'Airbus A321neo',
   A332: 'Airbus A330-200',
   A333: 'Airbus A330-300',
   A359: 'Airbus A350-900',
