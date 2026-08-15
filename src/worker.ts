@@ -62,7 +62,7 @@ const ARTWORK_ALERT_FROM = 'Flight Poster <flight-alerts@hizach.com>'
 const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
 
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
-  AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L']),
+  AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
   IB: new Set(['A319', 'A320', 'A321', 'A332']),
   VY: new Set(['A21N']),
 }
