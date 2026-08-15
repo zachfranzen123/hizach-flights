@@ -47,6 +47,7 @@ const airportDetails: Record<string, { city: string; timeZone: string }> = {
   DCA: { city: 'Washington', timeZone: 'America/New_York' },
   DEN: { city: 'Denver', timeZone: 'America/Denver' },
   EUG: { city: 'Eugene', timeZone: 'America/Los_Angeles' },
+  FCO: { city: 'Rome', timeZone: 'Europe/Rome' },
   GEG: { city: 'Spokane', timeZone: 'America/Los_Angeles' },
   HNL: { city: 'Honolulu', timeZone: 'Pacific/Honolulu' },
   IAD: { city: 'Washington', timeZone: 'America/New_York' },
