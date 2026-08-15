@@ -9,6 +9,7 @@ import alaska737900er from '../assets/aircraft/alaska-737-900er.png'
 import alaska737Max8 from '../assets/aircraft/alaska-737-max-8.png'
 import alaska737Max9 from '../assets/aircraft/alaska-737-max-9.png'
 import alaskaE175 from '../assets/aircraft/alaska-e175.png'
+import alaska7879 from '../assets/aircraft/alaska-787-9.png'
 import type { Flight } from '../data/sampleFlight'
 import { DestinationOverlay } from './DestinationOverlay'
 
@@ -44,6 +45,7 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
         B38M: alaska737Max8,
         B39M: alaska737Max9,
         E75L: alaskaE175,
+        B789: alaska7879,
       }
     : flight.airlineIata === 'VY'
       ? { A21N: vuelingA321neo }
