@@ -9,7 +9,7 @@ import alaska737900er from '../assets/aircraft/alaska-737-900er.png'
 import alaska737Max8 from '../assets/aircraft/alaska-737-max-8.png'
 import alaska737Max9 from '../assets/aircraft/alaska-737-max-9.png'
 import alaskaE175 from '../assets/aircraft/alaska-e175.png'
-// Alaska 787-9 uses the matte-free transparent Dreamliner cutout.
+// Alaska 787-9 uses the DDS-referenced transparent Dreamliner cutout.
 import alaska7879 from '../assets/aircraft/alaska-787-9.png'
 import type { Flight } from '../data/sampleFlight'
 import { DestinationOverlay } from './DestinationOverlay'
