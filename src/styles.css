@@ -247,11 +247,13 @@ a:focus-visible {
 
 .destination-sfo .poster-heading,
 .destination-sfo .poster-title-block {
-  color: #17344d;
+  color: #fff7e8;
+  text-shadow: 0 2px 8px rgb(23 52 77 / 48%);
 }
 
 .destination-sfo .poster-date {
-  color: #31546b;
+  color: #fff7e8;
+  text-shadow: 0 2px 8px rgb(23 52 77 / 48%);
 }
 
 .destination-sfo .poster-details {
