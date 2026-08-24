@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   flightAwareCacheSeconds,
   flightAwareCacheUrl,
+  flightAwareEquipment,
   flightEquipmentFromCode,
   flightIdentity,
 } from '../src/worker.ts'
@@ -39,4 +40,47 @@ test('FlightAware B39M renders as an Alaska Boeing 737 MAX 9', () => {
     code: 'B39M',
     name: 'Boeing 737 MAX 9',
   })
+})
+
+test('a cache write failure does not discard an assigned aircraft', async () => {
+  const originalCaches = globalThis.caches
+  const originalFetch = globalThis.fetch
+  Object.defineProperty(globalThis, 'caches', {
+    configurable: true,
+    value: {
+      default: {
+        match: async () => undefined,
+        put: async () => { throw new Error('cache unavailable') },
+      },
+    },
+  })
+  globalThis.fetch = async () => Response.json({
+    flights: [{
+      aircraft_type: 'B39M',
+      registration: 'N123AS',
+      scheduled_out: event.start.toISOString(),
+      origin: { code_iata: 'SFO' },
+      destination: { code_iata: 'LAX' },
+    }],
+  })
+
+  try {
+    const identity = flightIdentity(event)
+    assert.ok(identity)
+    const result = await flightAwareEquipment(identity, event, {
+      FLIGHTAWARE_AEROAPI_KEY: 'test-key',
+    })
+    assert.deepEqual(result.equipment, {
+      code: 'B39M',
+      name: 'Boeing 737 MAX 9',
+    })
+    assert.equal(result.registration, 'N123AS')
+    assert.equal(result.source, 'flightaware-assigned')
+  } finally {
+    globalThis.fetch = originalFetch
+    Object.defineProperty(globalThis, 'caches', {
+      configurable: true,
+      value: originalCaches,
+    })
+  }
 })

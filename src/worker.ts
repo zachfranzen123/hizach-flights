@@ -34,6 +34,13 @@ type FlightAwareFlight = {
   destination?: { code_iata?: string | null; code?: string | null }
 }
 
+type FlightAwareEquipmentResult = {
+  equipment: FlightEquipment | null
+  registration: string | null
+  source: 'flightaware-assigned' | 'flightaware-typical' | 'not-yet-available'
+  evidence: { matchingCount: number; totalCount: number } | null
+}
+
 type FrameMode = 'automatic' | 'flight' | 'photo'
 type PhotoTreatment = 'black-and-white' | 'six-color'
 
@@ -470,18 +477,39 @@ export function flightAwareCacheSeconds(hasAssignedAircraft: boolean): number {
     : FLIGHTAWARE_PENDING_CACHE_SECONDS
 }
 
-async function flightAwareEquipment(
+function unavailableFlightAwareEquipment(): FlightAwareEquipmentResult {
+  return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
+}
+
+async function cacheFlightAwareResponse(
+  cache: Cache,
+  cacheKey: Request,
+  data: { flights?: FlightAwareFlight[] },
+  maxAge: number,
+  ident: string,
+): Promise<void> {
+  try {
+    await cache.put(cacheKey, Response.json(data, {
+      headers: { 'Cache-Control': `public, max-age=${maxAge}` },
+    }))
+  } catch (error) {
+    // Caching is an optimization. A regional cache failure must never prevent
+    // the live display from receiving the FlightAware result we already have.
+    console.error(JSON.stringify({
+      event: 'flightaware_cache_write_error',
+      ident,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    }))
+  }
+}
+
+export async function flightAwareEquipment(
   identity: NonNullable<ReturnType<typeof flightIdentity>>,
   event: ParsedCalendarEvent,
   env: Env,
-): Promise<{
-  equipment: FlightEquipment | null
-  registration: string | null
-  source: 'flightaware-assigned' | 'flightaware-typical' | 'not-yet-available'
-  evidence: { matchingCount: number; totalCount: number } | null
-}> {
+): Promise<FlightAwareEquipmentResult> {
   if (!env.FLIGHTAWARE_AEROAPI_KEY) {
-    return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
+    return unavailableFlightAwareEquipment()
   }
 
   const ident = `${identity.airlineIcao}${identity.flightNumber}`
@@ -490,7 +518,16 @@ async function flightAwareEquipment(
   // aircraft assignment for up to six hours.
   const cacheKey = new Request(flightAwareCacheUrl(identity, event))
   const cache = (caches as CacheStorage & { default: Cache }).default
-  let response = await cache.match(cacheKey)
+  let response: Response | undefined
+  try {
+    response = await cache.match(cacheKey)
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'flightaware_cache_read_error',
+      ident,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    }))
+  }
   const cacheHit = Boolean(response)
 
   if (!response) {
@@ -503,7 +540,7 @@ async function flightAwareEquipment(
 
     if (!response.ok) {
       console.error(JSON.stringify({ event: 'flightaware_error', ident, status: response.status }))
-      return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
+      return unavailableFlightAwareEquipment()
     }
   }
 
@@ -528,9 +565,7 @@ async function flightAwareEquipment(
   const assignedCode = matching?.aircraft_type?.toUpperCase() ?? null
   if (assignedCode) {
     if (!cacheHit) {
-      await cache.put(cacheKey, Response.json(data, {
-        headers: { 'Cache-Control': `public, max-age=${flightAwareCacheSeconds(true)}` },
-      }))
+      await cacheFlightAwareResponse(cache, cacheKey, data, flightAwareCacheSeconds(true), ident)
     }
     return {
       equipment: flightEquipmentFromCode(assignedCode),
@@ -548,20 +583,16 @@ async function flightAwareEquipment(
   const typical = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]
   if (!typical) {
     if (!cacheHit) {
-      await cache.put(cacheKey, Response.json(data, {
-        headers: { 'Cache-Control': `public, max-age=${flightAwareCacheSeconds(false)}` },
-      }))
+      await cacheFlightAwareResponse(cache, cacheKey, data, flightAwareCacheSeconds(false), ident)
     }
-    return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
+    return unavailableFlightAwareEquipment()
   }
 
   const [typicalCode, matchingCount] = typical
   if (!cacheHit) {
     // A typical aircraft is only a fallback. Refresh it frequently so a newly
     // published assignment replaces the prediction without manual cache work.
-    await cache.put(cacheKey, Response.json(data, {
-      headers: { 'Cache-Control': `public, max-age=${flightAwareCacheSeconds(false)}` },
-    }))
+    await cacheFlightAwareResponse(cache, cacheKey, data, flightAwareCacheSeconds(false), ident)
   }
   return {
     equipment: flightEquipmentFromCode(typicalCode),
@@ -581,9 +612,30 @@ async function upcomingFlights(env: Env) {
 
   return Promise.all(upcoming.map(async ({ event, identity }) => {
     const manualEquipment = equipmentByFlight[`${identity.airlineIata}${identity.flightNumber}`] ?? null
-    const live = manualEquipment
-      ? { equipment: manualEquipment, registration: null, source: 'manual-override' as const, evidence: null }
-      : await flightAwareEquipment(identity, event, env)
+    let live: FlightAwareEquipmentResult | {
+      equipment: FlightEquipment
+      registration: null
+      source: 'manual-override'
+      evidence: null
+    }
+    if (manualEquipment) {
+      live = { equipment: manualEquipment, registration: null, source: 'manual-override', evidence: null }
+    } else {
+      try {
+        live = await flightAwareEquipment(identity, event, env)
+      } catch (error) {
+        // Keep the itinerary usable even when one upstream record is malformed
+        // or FlightAware has a transient failure. Only that aircraft falls back.
+        console.error(JSON.stringify({
+          event: 'flightaware_lookup_error',
+          ident: `${identity.airlineIcao}${identity.flightNumber}`,
+          origin: identity.origin,
+          destination: identity.destination,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        }))
+        live = unavailableFlightAwareEquipment()
+      }
+    }
 
     return {
       ...identity,
