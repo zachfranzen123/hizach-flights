@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
+    "test": "node --test tests/worker.test.ts",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {

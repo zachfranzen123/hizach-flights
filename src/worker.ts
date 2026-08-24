@@ -60,6 +60,9 @@ const PHOTO_METADATA_SUFFIX = '/metadata.json'
 const FRAME_SETTINGS_KEY = 'settings/frame.json'
 const ARTWORK_ALERT_FROM = 'Flight Poster <flight-alerts@hizach.com>'
 const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
+const FLIGHTAWARE_ASSIGNED_CACHE_SECONDS = 60 * 60
+const FLIGHTAWARE_PENDING_CACHE_SECONDS = 5 * 60
+const FLIGHTAWARE_CACHE_VERSION = 'v2'
 
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
@@ -101,6 +104,14 @@ const equipmentNameByIcao: Record<string, string> = {
   B789: 'Boeing 787-9',
   CRJX: 'Bombardier CRJ-1000',
   E75L: 'Embraer 175',
+}
+
+export function flightEquipmentFromCode(code: string): FlightEquipment {
+  const normalizedCode = code.toUpperCase()
+  return {
+    code: normalizedCode,
+    name: equipmentNameByIcao[normalizedCode] ?? normalizedCode,
+  }
 }
 
 function noStoreHeaders(extra: HeadersInit = {}): Headers {
@@ -444,6 +455,21 @@ async function calendarEvents(env: Env): Promise<ParsedCalendarEvent[]> {
   return parseCalendar(calendarText)
 }
 
+export function flightAwareCacheUrl(
+  identity: NonNullable<ReturnType<typeof flightIdentity>>,
+  event: ParsedCalendarEvent,
+): string {
+  const ident = `${identity.airlineIcao}${identity.flightNumber}`
+  const occurrence = encodeURIComponent(event.start.toISOString())
+  return `https://flightaware-cache.invalid/${FLIGHTAWARE_CACHE_VERSION}/${ident}/${identity.origin}-${identity.destination}/${occurrence}`
+}
+
+export function flightAwareCacheSeconds(hasAssignedAircraft: boolean): number {
+  return hasAssignedAircraft
+    ? FLIGHTAWARE_ASSIGNED_CACHE_SECONDS
+    : FLIGHTAWARE_PENDING_CACHE_SECONDS
+}
+
 async function flightAwareEquipment(
   identity: NonNullable<ReturnType<typeof flightIdentity>>,
   event: ParsedCalendarEvent,
@@ -459,9 +485,13 @@ async function flightAwareEquipment(
   }
 
   const ident = `${identity.airlineIcao}${identity.flightNumber}`
-  const cacheKey = new Request(`https://flightaware-cache.invalid/${ident}`)
+  // Cache each scheduled occurrence separately. A flight number alone is not
+  // unique and previously allowed an older TBD response to mask a later
+  // aircraft assignment for up to six hours.
+  const cacheKey = new Request(flightAwareCacheUrl(identity, event))
   const cache = (caches as CacheStorage & { default: Cache }).default
   let response = await cache.match(cacheKey)
+  const cacheHit = Boolean(response)
 
   if (!response) {
     response = await fetch(`https://aeroapi.flightaware.com/aeroapi/flights/${ident}?ident_type=designator&max_pages=1`, {
@@ -475,10 +505,6 @@ async function flightAwareEquipment(
       console.error(JSON.stringify({ event: 'flightaware_error', ident, status: response.status }))
       return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
     }
-
-    response = new Response(response.body, response)
-    response.headers.set('Cache-Control', 'public, max-age=21600')
-    await cache.put(cacheKey, response.clone())
   }
 
   const data = await response.json() as { flights?: FlightAwareFlight[] }
@@ -501,8 +527,13 @@ async function flightAwareEquipment(
 
   const assignedCode = matching?.aircraft_type?.toUpperCase() ?? null
   if (assignedCode) {
+    if (!cacheHit) {
+      await cache.put(cacheKey, Response.json(data, {
+        headers: { 'Cache-Control': `public, max-age=${flightAwareCacheSeconds(true)}` },
+      }))
+    }
     return {
-      equipment: { code: assignedCode, name: equipmentNameByIcao[assignedCode] ?? assignedCode },
+      equipment: flightEquipmentFromCode(assignedCode),
       registration: matching?.registration ?? null,
       source: 'flightaware-assigned',
       evidence: null,
@@ -516,12 +547,24 @@ async function flightAwareEquipment(
   }, {})
   const typical = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]
   if (!typical) {
+    if (!cacheHit) {
+      await cache.put(cacheKey, Response.json(data, {
+        headers: { 'Cache-Control': `public, max-age=${flightAwareCacheSeconds(false)}` },
+      }))
+    }
     return { equipment: null, registration: null, source: 'not-yet-available', evidence: null }
   }
 
   const [typicalCode, matchingCount] = typical
+  if (!cacheHit) {
+    // A typical aircraft is only a fallback. Refresh it frequently so a newly
+    // published assignment replaces the prediction without manual cache work.
+    await cache.put(cacheKey, Response.json(data, {
+      headers: { 'Cache-Control': `public, max-age=${flightAwareCacheSeconds(false)}` },
+    }))
+  }
   return {
-    equipment: { code: typicalCode, name: equipmentNameByIcao[typicalCode] ?? typicalCode },
+    equipment: flightEquipmentFromCode(typicalCode),
     registration: null,
     source: 'flightaware-typical',
     evidence: { matchingCount, totalCount: routeFlights.filter((flight) => flight.aircraft_type).length },
