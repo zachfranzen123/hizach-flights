@@ -42,7 +42,7 @@ const previewFlights = {
   },
 } satisfies Record<string, typeof sampleFlight>
 
-const palettes: PosterPalette[] = [
+export const palettes: PosterPalette[] = [
   {
     name: 'Aviation blue', background: '#164b91', foreground: '#fffdf5', muted: '#d9e5f4',
     decoration: { flowerPrimary: '#e95d4f', flowerSecondary: '#fff0c2', flowerCenter: '#e4b536', foliage: '#173f35', leafVein: '#7fa98a', bridge: '#f2b7a5', fog: '#d9e5f4' },

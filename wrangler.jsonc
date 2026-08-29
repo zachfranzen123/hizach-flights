@@ -7,6 +7,9 @@
   "triggers": {
     "crons": ["0 17 * * *"]
   },
+  "browser": {
+    "binding": "BROWSER"
+  },
   "r2_buckets": [
     {
       "binding": "PHOTO_BUCKET",

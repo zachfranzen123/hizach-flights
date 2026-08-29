@@ -10,7 +10,7 @@ type DisplayDialogProps = {
   palette: PosterPalette
 }
 
-type LiveFlight = {
+export type LiveFlight = {
     airlineIata: string
     airlineIcao: string
     airlineName: string
@@ -103,7 +103,7 @@ function timeLabel(iso: string, timeZone: string): string {
   }).format(new Date(iso))
 }
 
-function toPosterFlight(live: LiveFlight): Flight {
+export function toPosterFlight(live: LiveFlight): Flight {
   const origin = airportDetails[live.origin] ?? { city: live.origin, timeZone: 'UTC' }
   const destination = airportDetails[live.destination] ?? { city: live.destination, timeZone: 'UTC' }
 

@@ -52,6 +52,16 @@ Deploy this static prototype first, then add a small server-side route that:
 
 The calendar URL and API keys should be configured as hosting secrets, never committed to this project.
 
+## Physical frame endpoint
+
+The authenticated `GET /api/frame-image` route returns the current native
+`1200 × 1600` image for the EE02. In automatic mode it serves the active flight
+poster beginning three hours before departure and returns to an enabled photo at
+arrival. It uses ETags so the frame can poll without refreshing unchanged ink.
+
+Flight posters are captured once through the Cloudflare Browser Run binding and
+cached in R2. Photo mode returns the already processed frame JPEG directly.
+
 ## Artwork note
 
 The included Iberia aircraft is temporary concept artwork generated for this prototype. Replace it with the final aircraft-template and licensed airline-brand composite before production use.

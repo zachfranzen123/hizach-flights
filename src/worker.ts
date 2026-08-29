@@ -3,6 +3,7 @@
 
 type Env = {
   ASSETS: Fetcher
+  BROWSER: BrowserRun
   PHOTO_BUCKET: R2Bucket
   DISPLAY_ACCESS_TOKEN: string
   FLIGHTY_CALENDAR_ICS_URL: string
@@ -70,6 +71,10 @@ const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
 const FLIGHTAWARE_ASSIGNED_CACHE_SECONDS = 60 * 60
 const FLIGHTAWARE_PENDING_CACHE_SECONDS = 5 * 60
 const FLIGHTAWARE_CACHE_VERSION = 'v2'
+const FLIGHT_MODE_LEAD_MS = 3 * 60 * 60 * 1000
+const PHOTO_ROTATION_MS = 6 * 60 * 60 * 1000
+const FRAME_RENDER_SIGNATURE_MS = 2 * 60 * 1000
+const FRAME_RENDER_PREFIX = 'renders/'
 
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
@@ -125,6 +130,48 @@ function noStoreHeaders(extra: HeadersInit = {}): Headers {
   const headers = new Headers(extra)
   headers.set('Cache-Control', 'no-store')
   return headers
+}
+
+function hashString(value: string): number {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+function base64Url(bytes: Uint8Array): string {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/g, '')
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return base64Url(new Uint8Array(digest))
+}
+
+async function frameRenderSignature(secret: string, expires: string, flightStart: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const signed = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${expires}|${flightStart}`))
+  return base64Url(new Uint8Array(signed))
+}
+
+async function hasValidFrameRenderSignature(url: URL, env: Env): Promise<boolean> {
+  const expires = url.searchParams.get('expires') ?? ''
+  const flightStart = url.searchParams.get('flightStart') ?? ''
+  const signature = url.searchParams.get('signature') ?? ''
+  const expiry = Number(expires)
+  if (!env.DISPLAY_ACCESS_TOKEN || !signature || !flightStart || !Number.isFinite(expiry)) return false
+  if (expiry < Date.now() || expiry > Date.now() + FRAME_RENDER_SIGNATURE_MS) return false
+  return timingSafeTokenMatch(signature, await frameRenderSignature(env.DISPLAY_ACCESS_TOKEN, expires, flightStart))
 }
 
 function jsonError(message: string, status: number): Response {
@@ -657,6 +704,135 @@ async function nextFlight(env: Env) {
 
 type UpcomingFlight = Awaited<ReturnType<typeof upcomingFlights>>[number]
 
+type FrameSelection =
+  | { kind: 'flight'; flight: UpcomingFlight; paletteIndex: number; overlayVariant: number }
+  | { kind: 'photo'; photo: PhotoMetadata }
+  | { kind: 'empty' }
+
+export function isFlightWindow(start: string, end: string, now = Date.now()): boolean {
+  return now >= new Date(start).getTime() - FLIGHT_MODE_LEAD_MS
+    && now < new Date(end).getTime()
+}
+
+function flightPresentation(flight: UpcomingFlight) {
+  const key = `${flight.airlineIata}${flight.flightNumber}|${flight.start}|${flight.origin}|${flight.destination}`
+  return {
+    paletteIndex: hashString(key) % 4,
+    overlayVariant: hashString(`${key}|overlay`) % 3,
+  }
+}
+
+async function selectFrame(env: Env, now = Date.now()): Promise<FrameSelection> {
+  const settings = await frameSettings(env)
+  const flights = settings.mode === 'photo' ? [] : await upcomingFlights(env)
+  const activeFlight = settings.mode === 'flight'
+    ? flights[0]
+    : settings.mode === 'automatic'
+      ? flights.find((flight) => isFlightWindow(flight.start, flight.end, now))
+      : undefined
+
+  if (activeFlight) {
+    return { kind: 'flight', flight: activeFlight, ...flightPresentation(activeFlight) }
+  }
+
+  const photos = (await listPhotos(env)).filter((photo) => photo.enabled)
+  if (photos.length === 0) return { kind: 'empty' }
+  const slot = Math.floor(now / PHOTO_ROTATION_MS)
+  const index = settings.rotation === 'ordered'
+    ? slot % photos.length
+    : hashString(`${slot}|${settings.updatedAt}`) % photos.length
+  return { kind: 'photo', photo: photos[index] }
+}
+
+function notModified(request: Request, etag: string): Response | null {
+  return request.headers.get('If-None-Match') === etag
+    ? new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': 'private, no-cache' } })
+    : null
+}
+
+function frameImageHeaders(contentType: string, etag: string): Headers {
+  return new Headers({
+    'Content-Type': contentType,
+    'Cache-Control': 'private, no-cache',
+    ETag: etag,
+    'X-Frame-Width': '1200',
+    'X-Frame-Height': '1600',
+  })
+}
+
+async function handleFrameData(url: URL, env: Env): Promise<Response> {
+  if (!(await hasValidFrameRenderSignature(url, env))) return jsonError('Invalid render signature', 401)
+  const flightStart = url.searchParams.get('flightStart') as string
+  const flight = (await upcomingFlights(env)).find((candidate) => candidate.start === flightStart)
+  if (!flight) return jsonError('Flight no longer available', 404)
+  return Response.json(
+    { flight: { ...flight, tailUrl: '' }, ...flightPresentation(flight) },
+    { headers: noStoreHeaders() },
+  )
+}
+
+async function handleFrameImage(request: Request, env: Env): Promise<Response> {
+  const selection = await selectFrame(env)
+  if (selection.kind === 'empty') return jsonError('No frame image is available yet', 404)
+
+  if (selection.kind === 'photo') {
+    const object = await env.PHOTO_BUCKET.get(photoKeys(selection.photo.id).display)
+    if (!object) return jsonError('Frame photo not found', 404)
+    const etag = `"photo-${selection.photo.id}-${selection.photo.updatedAt}"`
+    const unchanged = notModified(request, etag)
+    if (unchanged) return unchanged
+    return new Response(object.body, {
+      headers: frameImageHeaders(object.httpMetadata?.contentType ?? 'image/jpeg', etag),
+    })
+  }
+
+  const identity = JSON.stringify({
+    flight: selection.flight,
+    paletteIndex: selection.paletteIndex,
+    overlayVariant: selection.overlayVariant,
+  })
+  const fingerprint = await sha256(identity)
+  const etag = `"flight-${fingerprint}"`
+  const unchanged = notModified(request, etag)
+  if (unchanged) return unchanged
+
+  const renderKey = `${FRAME_RENDER_PREFIX}${fingerprint}.png`
+  const cached = await env.PHOTO_BUCKET.get(renderKey)
+  if (cached) {
+    return new Response(cached.body, { headers: frameImageHeaders('image/png', etag) })
+  }
+
+  const expires = String(Date.now() + FRAME_RENDER_SIGNATURE_MS)
+  const signature = await frameRenderSignature(env.DISPLAY_ACCESS_TOKEN, expires, selection.flight.start)
+  const renderUrl = new URL('/frame-render', request.url)
+  renderUrl.searchParams.set('expires', expires)
+  renderUrl.searchParams.set('flightStart', selection.flight.start)
+  renderUrl.searchParams.set('signature', signature)
+
+  const screenshot = await env.BROWSER.quickAction('screenshot', {
+    url: renderUrl.toString(),
+    viewport: { width: 1200, height: 1600, deviceScaleFactor: 1 },
+    waitForSelector: { selector: '.frame-render-ready', visible: true, timeout: 45_000 },
+    actionTimeout: 60_000,
+    cacheTTL: 0,
+    screenshotOptions: {
+      type: 'png',
+      fullPage: false,
+      clip: { x: 0, y: 0, width: 1200, height: 1600 },
+    },
+  })
+  if (!screenshot.ok) {
+    console.error(JSON.stringify({ event: 'frame_render_error', status: screenshot.status, details: await screenshot.text() }))
+    return jsonError('Frame image could not be rendered', 502)
+  }
+
+  const image = await screenshot.arrayBuffer()
+  await env.PHOTO_BUCKET.put(renderKey, image, {
+    httpMetadata: { contentType: 'image/png', cacheControl: 'private, max-age=31536000, immutable' },
+  })
+  return new Response(image, { headers: frameImageHeaders('image/png', etag) })
+}
+
 function missingArtwork(flights: UpcomingFlight[]): UpcomingFlight[] {
   return flights.filter((flight) => {
     const aircraftCode = flight.equipment?.code
@@ -797,6 +973,7 @@ export default {
           purpose: 'personal-non-commercial',
           integrations: {
             displayToken: Boolean(env.DISPLAY_ACCESS_TOKEN),
+            browserRenderer: Boolean(env.BROWSER),
             flightyCalendar: Boolean(env.FLIGHTY_CALENDAR_ICS_URL),
             flightaware: Boolean(env.FLIGHTAWARE_AEROAPI_KEY),
             logostream: Boolean(env.LOGOSTREAM_API_KEY),
@@ -813,7 +990,25 @@ export default {
       return handleUnlock(request, env)
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/frame-data') {
+      try {
+        return await handleFrameData(url, env)
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'frame_data_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Frame data unavailable', 502)
+      }
+    }
+
     if (!(await isAuthorized(request, env))) return jsonError('Unauthorized', 401)
+
+    if (request.method === 'GET' && url.pathname === '/api/frame-image') {
+      try {
+        return await handleFrameImage(request, env)
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'frame_image_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Frame image unavailable', 502)
+      }
+    }
 
     if (request.method === 'GET' && url.pathname === '/api/photos') {
       try {

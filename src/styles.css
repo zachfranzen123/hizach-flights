@@ -198,6 +198,52 @@ a:focus-visible {
   container-type: inline-size;
 }
 
+/* Native EE02 capture surface. Browser Run screenshots this route at the
+   panel's exact 1200 x 1600 resolution; it is intentionally not responsive. */
+body:has(.frame-render-root),
+body:has(.frame-render-loading) {
+  margin: 0;
+  width: 1200px;
+  height: 1600px;
+  overflow: hidden;
+  background: #164b91;
+}
+
+.frame-render-root,
+.frame-render-loading {
+  width: 1200px;
+  height: 1600px;
+}
+
+.frame-render-root .flight-poster {
+  width: 1200px;
+  height: 1600px;
+  aspect-ratio: auto;
+  border: 0;
+}
+
+.frame-render-root .poster-label,
+.frame-render-root .poster-date {
+  font-size: 27px;
+}
+
+.frame-render-root .poster-title-block h2 {
+  font-size: 188px;
+}
+
+.frame-render-root .poster-title-block > p {
+  font-size: 98px;
+}
+
+.frame-render-root .poster-details div > p:nth-child(2) {
+  font-size: 37px;
+}
+
+.frame-render-root .poster-code,
+.frame-render-root .poster-times {
+  font-size: 22px;
+}
+
 .destination-overlay {
   position: absolute;
   z-index: 0;

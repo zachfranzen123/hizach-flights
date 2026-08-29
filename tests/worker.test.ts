@@ -6,6 +6,7 @@ import {
   flightAwareEquipment,
   flightEquipmentFromCode,
   flightIdentity,
+  isFlightWindow,
 } from '../src/worker.ts'
 
 const event = {
@@ -40,6 +41,15 @@ test('FlightAware B39M renders as an Alaska Boeing 737 MAX 9', () => {
     code: 'B39M',
     name: 'Boeing 737 MAX 9',
   })
+})
+
+test('automatic frame mode opens three hours before departure and closes at arrival', () => {
+  const start = '2026-08-30T16:00:00.000Z'
+  const end = '2026-08-30T18:00:00.000Z'
+  assert.equal(isFlightWindow(start, end, new Date('2026-08-30T12:59:59.000Z').getTime()), false)
+  assert.equal(isFlightWindow(start, end, new Date('2026-08-30T13:00:00.000Z').getTime()), true)
+  assert.equal(isFlightWindow(start, end, new Date('2026-08-30T17:59:59.000Z').getTime()), true)
+  assert.equal(isFlightWindow(start, end, new Date('2026-08-30T18:00:00.000Z').getTime()), false)
 })
 
 test('a cache write failure does not discard an assigned aircraft', async () => {
