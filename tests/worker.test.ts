@@ -7,6 +7,7 @@ import {
   flightEquipmentFromCode,
   flightIdentity,
   isFlightWindow,
+  photoIndexForSlot,
 } from '../src/worker.ts'
 import { automaticOverlayVariant, automaticPaletteIndex, palettes } from '../src/data/posterPalettes.ts'
 
@@ -51,6 +52,21 @@ test('automatic frame mode opens three hours before departure and closes at arri
   assert.equal(isFlightWindow(start, end, new Date('2026-08-30T13:00:00.000Z').getTime()), true)
   assert.equal(isFlightWindow(start, end, new Date('2026-08-30T17:59:59.000Z').getTime()), true)
   assert.equal(isFlightWindow(start, end, new Date('2026-08-30T18:00:00.000Z').getTime()), false)
+})
+
+test('shuffled photo rotation shows every enabled photo before repeating', () => {
+  const photos = [
+    { id: 'photo-a' },
+    { id: 'photo-b' },
+    { id: 'photo-c' },
+    { id: 'photo-d' },
+  ]
+  const firstCycle = photos.map((_, slot) => photoIndexForSlot(photos, slot, 'shuffle', 'frame-seed'))
+  const secondCycle = photos.map((_, slot) => photoIndexForSlot(photos, slot + photos.length, 'shuffle', 'frame-seed'))
+
+  assert.equal(new Set(firstCycle).size, photos.length)
+  assert.deepEqual(secondCycle, firstCycle)
+  assert.notEqual(firstCycle.at(-1), secondCycle[0])
 })
 
 test('poster palette is automatic per flight while SFO keeps its bridge treatment', () => {

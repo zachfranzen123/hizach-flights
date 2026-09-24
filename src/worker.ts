@@ -30,6 +30,27 @@ function stableHash(value: string): number {
   return hash >>> 0
 }
 
+export function photoIndexForSlot(
+  photos: ReadonlyArray<{ id: string }>,
+  slot: number,
+  rotation: FrameSettings['rotation'],
+  seed: string,
+): number {
+  if (photos.length === 0) return -1
+  const normalizedSlot = Math.max(0, Math.floor(slot))
+  if (rotation === 'ordered') return normalizedSlot % photos.length
+
+  const shuffledIndices = photos
+    .map((photo, index) => ({
+      id: photo.id,
+      index,
+      rank: stableHash(`${seed}|${photo.id}`),
+    }))
+    .sort((a, b) => a.rank - b.rank || a.id.localeCompare(b.id))
+
+  return shuffledIndices[normalizedSlot % shuffledIndices.length].index
+}
+
 function presentationKey(flight: PresentationFlightIdentity): string {
   return `${flight.airlineIata}${flight.flightNumber}|${flight.start}|${flight.origin}|${flight.destination}`
 }
@@ -764,9 +785,7 @@ async function selectFrame(env: Env, now = Date.now()): Promise<FrameSelection> 
   const photos = (await listPhotos(env)).filter((photo) => photo.enabled)
   if (photos.length === 0) return { kind: 'empty' }
   const slot = Math.floor(now / PHOTO_ROTATION_MS)
-  const index = settings.rotation === 'ordered'
-    ? slot % photos.length
-    : stableHash(`${slot}|${settings.updatedAt}`) % photos.length
+  const index = photoIndexForSlot(photos, slot, settings.rotation, settings.updatedAt)
   return { kind: 'photo', photo: photos[index] }
 }
 
