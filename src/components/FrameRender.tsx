@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { palettes } from '../App'
+import { palettes } from '../data/posterPalettes'
 import type { Flight } from '../data/sampleFlight'
 import { FlightPoster } from './FlightPoster'
 import { toPosterFlight, type LiveFlight } from './DisplayDialog'

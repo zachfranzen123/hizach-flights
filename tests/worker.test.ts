@@ -8,6 +8,7 @@ import {
   flightIdentity,
   isFlightWindow,
 } from '../src/worker.ts'
+import { automaticOverlayVariant, automaticPaletteIndex, palettes } from '../src/data/posterPalettes.ts'
 
 const event = {
   summary: 'AS 1329 · SFO → LAX',
@@ -50,6 +51,37 @@ test('automatic frame mode opens three hours before departure and closes at arri
   assert.equal(isFlightWindow(start, end, new Date('2026-08-30T13:00:00.000Z').getTime()), true)
   assert.equal(isFlightWindow(start, end, new Date('2026-08-30T17:59:59.000Z').getTime()), true)
   assert.equal(isFlightWindow(start, end, new Date('2026-08-30T18:00:00.000Z').getTime()), false)
+})
+
+test('poster palette is automatic per flight while SFO keeps its bridge treatment', () => {
+  const sfoFlight = {
+    airlineIata: 'AS', flightNumber: '688', start: '2026-09-22T17:52:00.000Z', origin: 'SEA', destination: 'SFO',
+  }
+  assert.equal(automaticPaletteIndex(sfoFlight), 0)
+
+  const otherFlights = [
+    { ...sfoFlight, flightNumber: '316', destination: 'SEA', origin: 'SFO' },
+    { ...sfoFlight, flightNumber: '877', destination: 'HNL', origin: 'SFO' },
+    { ...sfoFlight, flightNumber: '341', destination: 'LAX', origin: 'SFO' },
+    { ...sfoFlight, flightNumber: '20', destination: 'JFK', origin: 'SFO' },
+  ]
+  const indices = otherFlights.map((flight) => automaticPaletteIndex(flight))
+  assert.ok(indices.every((index) => index >= 0 && index < palettes.length))
+  assert.ok(new Set(indices).size > 1)
+  assert.equal(automaticPaletteIndex(otherFlights[0]), indices[0])
+})
+
+test('SFO flights automatically vary among the three Golden Gate treatments', () => {
+  const sfoFlights = [
+    { airlineIata: 'AS', flightNumber: '688', start: '2026-09-22T17:52:00.000Z', origin: 'SEA', destination: 'SFO' },
+    { airlineIata: 'AS', flightNumber: '1327', start: '2026-09-24T17:52:00.000Z', origin: 'SEA', destination: 'SFO' },
+    { airlineIata: 'AS', flightNumber: '331', start: '2026-09-26T17:52:00.000Z', origin: 'JFK', destination: 'SFO' },
+    { airlineIata: 'AS', flightNumber: '343', start: '2026-09-28T17:52:00.000Z', origin: 'LAX', destination: 'SFO' },
+  ]
+  const variants = sfoFlights.map((flight) => automaticOverlayVariant(flight))
+  assert.ok(variants.every((variant) => variant >= 0 && variant < 3))
+  assert.ok(new Set(variants).size > 1)
+  assert.equal(automaticOverlayVariant(sfoFlights[0]), variants[0])
 })
 
 test('a cache write failure does not discard an assigned aircraft', async () => {

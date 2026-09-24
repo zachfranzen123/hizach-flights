@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { ChevronLeft, ChevronRight, KeyRound, LoaderCircle, RefreshCw, X } from 'lucide-react'
 import type { Flight } from '../data/sampleFlight'
+import { automaticPaletteIndex, palettes } from '../data/posterPalettes'
 import { FlightPoster, type PosterPalette } from './FlightPoster'
 
 type DisplayDialogProps = {
@@ -27,6 +28,8 @@ export type LiveFlight = {
     }
     flightNumber: string
     origin: string
+    overlayVariant: number
+    paletteIndex: number
     start: string
     tailUrl: string
 }
@@ -126,6 +129,7 @@ export function toPosterFlight(live: LiveFlight): Flight {
       ? `${live.equipmentEvidence.matchingCount} of ${live.equipmentEvidence.totalCount} recent flights`
       : undefined,
     tailUrl: live.tailUrl,
+    overlayVariant: live.overlayVariant,
     status: 'up-next',
   }
 }
@@ -133,6 +137,7 @@ export function toPosterFlight(live: LiveFlight): Flight {
 export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogProps) {
   const [phase, setPhase] = useState<DisplayPhase>('loading')
   const [liveFlights, setLiveFlights] = useState<Flight[]>([])
+  const [livePaletteIndices, setLivePaletteIndices] = useState<number[]>([])
   const [flightIndex, setFlightIndex] = useState(0)
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
@@ -160,6 +165,7 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
       }
 
       setLiveFlights(data.flights.map(toPosterFlight))
+      setLivePaletteIndices(data.flights.map((liveFlight) => liveFlight.paletteIndex ?? automaticPaletteIndex(liveFlight)))
       setFlightIndex(0)
       setPhase('ready')
     } catch (error) {
@@ -214,7 +220,11 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
 
       {phase === 'ready' && liveFlights[flightIndex] && (
         <>
-          <FlightPoster flight={liveFlights[flightIndex]} palette={palette} className="poster-fullscreen" />
+          <FlightPoster
+            flight={liveFlights[flightIndex]}
+            palette={palettes[livePaletteIndices[flightIndex] ?? 0] ?? palettes[0]}
+            className="poster-fullscreen"
+          />
           {liveFlights.length > 1 && (
             <nav className="flight-preview-nav" aria-label="Upcoming flight previews">
               <button
@@ -275,6 +285,7 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
             type="button"
             onClick={() => {
               setLiveFlights([flight])
+              setLivePaletteIndices([Math.max(0, palettes.indexOf(palette))])
               setFlightIndex(0)
               setPhase('ready')
             }}

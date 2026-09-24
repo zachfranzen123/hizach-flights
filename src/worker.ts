@@ -13,6 +13,37 @@ type Env = {
   ARTWORK_ALERT_TO: string
 }
 
+type PresentationFlightIdentity = {
+  airlineIata: string
+  flightNumber: string
+  start: string
+  origin: string
+  destination: string
+}
+
+function stableHash(value: string): number {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+function presentationKey(flight: PresentationFlightIdentity): string {
+  return `${flight.airlineIata}${flight.flightNumber}|${flight.start}|${flight.origin}|${flight.destination}`
+}
+
+export function automaticPaletteIndex(flight: PresentationFlightIdentity, paletteCount = 4): number {
+  if (paletteCount <= 1 || flight.destination === 'SFO') return 0
+  return stableHash(presentationKey(flight)) % paletteCount
+}
+
+export function automaticOverlayVariant(flight: PresentationFlightIdentity, variantCount = 3): number {
+  if (variantCount <= 1) return 0
+  return stableHash(`${presentationKey(flight)}|overlay`) % variantCount
+}
+
 type FlightEquipment = {
   code: string
   name: string
@@ -130,15 +161,6 @@ function noStoreHeaders(extra: HeadersInit = {}): Headers {
   const headers = new Headers(extra)
   headers.set('Cache-Control', 'no-store')
   return headers
-}
-
-function hashString(value: string): number {
-  let hash = 2166136261
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-  return hash >>> 0
 }
 
 function base64Url(bytes: Uint8Array): string {
@@ -684,7 +706,7 @@ async function upcomingFlights(env: Env) {
       }
     }
 
-    return {
+    const flight = {
       ...identity,
       start: event.start.toISOString(),
       end: event.end.toISOString(),
@@ -694,6 +716,11 @@ async function upcomingFlights(env: Env) {
       equipmentSource: live.source,
       equipmentEvidence: live.evidence,
       tailUrl: `/api/airline-tail/${identity.airlineIcao}`,
+    }
+    return {
+      ...flight,
+      paletteIndex: automaticPaletteIndex(flight),
+      overlayVariant: automaticOverlayVariant(flight),
     }
   }))
 }
@@ -715,10 +742,9 @@ export function isFlightWindow(start: string, end: string, now = Date.now()): bo
 }
 
 function flightPresentation(flight: UpcomingFlight) {
-  const key = `${flight.airlineIata}${flight.flightNumber}|${flight.start}|${flight.origin}|${flight.destination}`
   return {
-    paletteIndex: hashString(key) % 4,
-    overlayVariant: hashString(`${key}|overlay`) % 3,
+    paletteIndex: flight.paletteIndex,
+    overlayVariant: flight.overlayVariant,
   }
 }
 
@@ -740,7 +766,7 @@ async function selectFrame(env: Env, now = Date.now()): Promise<FrameSelection> 
   const slot = Math.floor(now / PHOTO_ROTATION_MS)
   const index = settings.rotation === 'ordered'
     ? slot % photos.length
-    : hashString(`${slot}|${settings.updatedAt}`) % photos.length
+    : stableHash(`${slot}|${settings.updatedAt}`) % photos.length
   return { kind: 'photo', photo: photos[index] }
 }
 
