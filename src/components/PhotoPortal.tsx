@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Check, ImagePlus, KeyRound, LoaderCircle, Lock, Plane, Shuffle, Trash2, Upload, X } from 'lucide-react'
+import { processPhotoPixels, type PhotoTreatment as Treatment } from '../data/photoProcessing'
 
-type Treatment = 'black-and-white' | 'six-color'
 type FrameMode = 'automatic' | 'flight' | 'photo'
 
 type Photo = {
@@ -23,43 +23,9 @@ type LibraryResponse = { photos: Photo[]; settings: FrameSettings }
 type Phase = 'loading' | 'locked' | 'ready' | 'error'
 
 const defaultSettings: FrameSettings = { mode: 'automatic', rotation: 'shuffle', updatedAt: '' }
-const palette = [
-  [22, 28, 32], [244, 240, 226], [33, 77, 137],
-  [184, 59, 48], [218, 166, 42], [53, 101, 77],
-] as const
-
 function processPixels(context: CanvasRenderingContext2D, width: number, height: number, treatment: Treatment, brightness: number, contrast: number) {
   const image = context.getImageData(0, 0, width, height)
-  const data = image.data
-  const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast))
-
-  for (let index = 0; index < data.length; index += 4) {
-    let red = Math.max(0, Math.min(255, contrastFactor * (data[index] - 128) + 128 + brightness))
-    let green = Math.max(0, Math.min(255, contrastFactor * (data[index + 1] - 128) + 128 + brightness))
-    let blue = Math.max(0, Math.min(255, contrastFactor * (data[index + 2] - 128) + 128 + brightness))
-
-    if (treatment === 'black-and-white') {
-      const luminance = red * 0.299 + green * 0.587 + blue * 0.114
-      red = luminance
-      green = luminance
-      blue = luminance
-    } else {
-      let best: readonly [number, number, number] = palette[0]
-      let distance = Number.POSITIVE_INFINITY
-      for (const color of palette) {
-        const nextDistance = (red - color[0]) ** 2 + (green - color[1]) ** 2 + (blue - color[2]) ** 2
-        if (nextDistance < distance) {
-          best = color
-          distance = nextDistance
-        }
-      }
-      ;[red, green, blue] = best
-    }
-
-    data[index] = red
-    data[index + 1] = green
-    data[index + 2] = blue
-  }
+  processPhotoPixels(image.data, treatment, brightness, contrast)
   context.putImageData(image, 0, 0)
 }
 
@@ -111,7 +77,7 @@ export function PhotoPortal() {
   const [fit, setFit] = useState<'fill' | 'fit'>('fill')
   const [treatment, setTreatment] = useState<Treatment>('black-and-white')
   const [brightness, setBrightness] = useState(0)
-  const [contrast, setContrast] = useState(15)
+  const [contrast, setContrast] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [uploading, setUploading] = useState(false)
@@ -386,9 +352,10 @@ export function PhotoPortal() {
                 <span>Display</span>
                 <div className="segmented">
                   <button type="button" className={treatment === 'black-and-white' ? 'selected' : ''} onClick={() => setTreatment('black-and-white')} disabled={!sourceImage}>B&amp;W</button>
-                  <button type="button" className={treatment === 'six-color' ? 'selected' : ''} onClick={() => setTreatment('six-color')} disabled={!sourceImage}>Six color</button>
+                  <button type="button" className={treatment === 'six-color' ? 'selected' : ''} onClick={() => setTreatment('six-color')} disabled={!sourceImage}>Color</button>
                 </div>
               </div>
+              <p className="control-note">Color uploads stay full-color. Your EE02 applies the dithering selected in photoframe.local.</p>
               <label className="slider-row"><span>Zoom</span><input type="range" min="1" max="2" step="0.02" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} disabled={!sourceImage} /></label>
               <label className="slider-row"><span>Contrast</span><input type="range" min="-40" max="70" value={contrast} onChange={(event) => setContrast(Number(event.target.value))} disabled={!sourceImage} /></label>
               <label className="slider-row"><span>Brightness</span><input type="range" min="-55" max="55" value={brightness} onChange={(event) => setBrightness(Number(event.target.value))} disabled={!sourceImage} /></label>
@@ -422,7 +389,7 @@ export function PhotoPortal() {
                 <article className={`photo-card ${photo.enabled ? '' : 'is-paused'}`} key={photo.id}>
                   <img src={`/api/photos/${photo.id}/thumbnail`} alt="" loading="lazy" />
                   <div className="photo-card-info">
-                    <div><p>{photo.name}</p><span>{photo.treatment === 'black-and-white' ? 'Black & white' : 'Six color'}</span></div>
+                    <div><p>{photo.name}</p><span>{photo.treatment === 'black-and-white' ? 'Black & white' : 'Color · frame dither'}</span></div>
                     <button className={`photo-toggle ${photo.enabled ? 'is-on' : ''}`} type="button" onClick={() => void togglePhoto(photo)} aria-label={`${photo.enabled ? 'Pause' : 'Include'} ${photo.name}`} aria-pressed={photo.enabled}><span /></button>
                     <button className="delete-photo" type="button" onClick={() => void deletePhoto(photo)} aria-label={`Delete ${photo.name}`}><Trash2 aria-hidden="true" /></button>
                   </div>

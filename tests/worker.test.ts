@@ -10,6 +10,7 @@ import {
   photoIndexForSlot,
 } from '../src/worker.ts'
 import { automaticOverlayVariant, automaticPaletteIndex, palettes } from '../src/data/posterPalettes.ts'
+import { processPhotoPixels } from '../src/data/photoProcessing.ts'
 
 const event = {
   summary: 'AS 1329 · SFO → LAX',
@@ -67,6 +68,17 @@ test('shuffled photo rotation shows every enabled photo before repeating', () =>
   assert.equal(new Set(firstCycle).size, photos.length)
   assert.deepEqual(secondCycle, firstCycle)
   assert.notEqual(firstCycle.at(-1), secondCycle[0])
+})
+
+test('color photo processing preserves color for EE02 dithering', () => {
+  const color = new Uint8ClampedArray([214, 83, 37, 255, 22, 149, 201, 255])
+  processPhotoPixels(color, 'six-color', 0, 0)
+  assert.deepEqual([...color], [214, 83, 37, 255, 22, 149, 201, 255])
+
+  const monochrome = new Uint8ClampedArray([214, 83, 37, 255])
+  processPhotoPixels(monochrome, 'black-and-white', 0, 0)
+  assert.equal(monochrome[0], monochrome[1])
+  assert.equal(monochrome[1], monochrome[2])
 })
 
 test('poster palette is automatic per flight while SFO keeps its bridge treatment', () => {
