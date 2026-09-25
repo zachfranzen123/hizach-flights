@@ -112,12 +112,18 @@ type FrameSettings = {
   updatedAt: string
 }
 
+type LastFrameSnapshot = {
+  selection: FrameSelection
+  fetchedAt: string
+}
+
 const MAX_CALENDAR_BYTES = 1_000_000
 const MAX_UNLOCK_BYTES = 4_096
 const MAX_PHOTO_UPLOAD_BYTES = 8_000_000
 const MAX_PHOTOS = 100
 const PHOTO_METADATA_SUFFIX = '/metadata.json'
 const FRAME_SETTINGS_KEY = 'settings/frame.json'
+const LAST_FRAME_KEY = 'settings/last-frame.json'
 const ARTWORK_ALERT_FROM = 'Flight Poster <flight-alerts@hizach.com>'
 const ARTWORK_ALERT_CACHE_SECONDS = 30 * 24 * 60 * 60
 const FLIGHTAWARE_ASSIGNED_CACHE_SECONDS = 60 * 60
@@ -789,6 +795,28 @@ async function selectFrame(env: Env, now = Date.now()): Promise<FrameSelection> 
   return { kind: 'photo', photo: photos[index] }
 }
 
+async function rememberFrame(env: Env, selection: FrameSelection): Promise<void> {
+  try {
+    const snapshot: LastFrameSnapshot = { selection, fetchedAt: new Date().toISOString() }
+    await env.PHOTO_BUCKET.put(LAST_FRAME_KEY, JSON.stringify(snapshot), {
+      httpMetadata: { contentType: 'application/json', cacheControl: 'private, no-store' },
+    })
+  } catch (error) {
+    // A telemetry write must never prevent the frame from being displayed.
+    console.error(JSON.stringify({ event: 'last_frame_write_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+  }
+}
+
+async function lastFrameSelection(env: Env): Promise<LastFrameSnapshot | null> {
+  const snapshot = await readR2Json<LastFrameSnapshot>(await env.PHOTO_BUCKET.get(LAST_FRAME_KEY))
+  if (!snapshot || !snapshot.selection || !['photo', 'flight', 'empty'].includes(snapshot.selection.kind)) return null
+  if (snapshot.selection.kind === 'photo') {
+    const photo = await readR2Json<PhotoMetadata>(await env.PHOTO_BUCKET.get(photoKeys(snapshot.selection.photo.id).metadata))
+    if (!photo) return null
+  }
+  return snapshot
+}
+
 function notModified(request: Request, etag: string): Response | null {
   return request.headers.get('If-None-Match') === etag
     ? new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': 'private, no-cache' } })
@@ -816,6 +844,24 @@ async function handleFrameData(url: URL, env: Env): Promise<Response> {
   )
 }
 
+async function handleCurrentFrame(env: Env): Promise<Response> {
+  // Prefer the last successful frame fetch so this mirrors the e-paper's
+  // actual state even when the device is asleep or temporarily offline.
+  const snapshot = await lastFrameSelection(env)
+  const selection = snapshot?.selection ?? await selectFrame(env)
+  if (selection.kind === 'empty') return Response.json({ kind: 'empty' }, { headers: noStoreHeaders() })
+  if (selection.kind === 'photo') {
+    return Response.json({ kind: 'photo', photo: selection.photo, fetchedAt: snapshot?.fetchedAt ?? null }, { headers: noStoreHeaders() })
+  }
+  return Response.json({
+    kind: 'flight',
+    flight: selection.flight,
+    paletteIndex: selection.paletteIndex,
+    overlayVariant: selection.overlayVariant,
+    fetchedAt: snapshot?.fetchedAt ?? null,
+  }, { headers: noStoreHeaders() })
+}
+
 async function handleFrameImage(request: Request, env: Env): Promise<Response> {
   const selection = await selectFrame(env)
   if (selection.kind === 'empty') return jsonError('No frame image is available yet', 404)
@@ -823,6 +869,7 @@ async function handleFrameImage(request: Request, env: Env): Promise<Response> {
   if (selection.kind === 'photo') {
     const object = await env.PHOTO_BUCKET.get(photoKeys(selection.photo.id).display)
     if (!object) return jsonError('Frame photo not found', 404)
+    await rememberFrame(env, selection)
     const etag = `"photo-${selection.photo.id}-${selection.photo.updatedAt}"`
     const unchanged = notModified(request, etag)
     if (unchanged) return unchanged
@@ -839,11 +886,15 @@ async function handleFrameImage(request: Request, env: Env): Promise<Response> {
   const fingerprint = await sha256(identity)
   const etag = `"flight-${fingerprint}"`
   const unchanged = notModified(request, etag)
-  if (unchanged) return unchanged
+  if (unchanged) {
+    await rememberFrame(env, selection)
+    return unchanged
+  }
 
   const renderKey = `${FRAME_RENDER_PREFIX}${fingerprint}.png`
   const cached = await env.PHOTO_BUCKET.get(renderKey)
   if (cached) {
+    await rememberFrame(env, selection)
     return new Response(cached.body, { headers: frameImageHeaders('image/png', etag) })
   }
 
@@ -875,6 +926,7 @@ async function handleFrameImage(request: Request, env: Env): Promise<Response> {
   await env.PHOTO_BUCKET.put(renderKey, image, {
     httpMetadata: { contentType: 'image/png', cacheControl: 'private, max-age=31536000, immutable' },
   })
+  await rememberFrame(env, selection)
   return new Response(image, { headers: frameImageHeaders('image/png', etag) })
 }
 
@@ -1052,6 +1104,15 @@ export default {
       } catch (error) {
         console.error(JSON.stringify({ event: 'frame_image_error', message: error instanceof Error ? error.message : 'Unknown error' }))
         return jsonError('Frame image unavailable', 502)
+      }
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/current-frame') {
+      try {
+        return await handleCurrentFrame(env)
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'current_frame_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Current frame unavailable', 502)
       }
     }
 

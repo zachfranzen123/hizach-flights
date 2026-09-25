@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { ChevronLeft, ChevronRight, KeyRound, LoaderCircle, RefreshCw, X } from 'lucide-react'
+import { KeyRound, LoaderCircle, RefreshCw, X } from 'lucide-react'
 import type { Flight } from '../data/sampleFlight'
 import { automaticPaletteIndex, palettes } from '../data/posterPalettes'
 import { FlightPoster, type PosterPalette } from './FlightPoster'
@@ -34,9 +34,16 @@ export type LiveFlight = {
     tailUrl: string
 }
 
-type LiveFlightResponse = {
-  flights: LiveFlight[]
+type CurrentPhoto = {
+  id: string
+  name: string
+  updatedAt: string
 }
+
+type CurrentFrameResponse =
+  | { kind: 'empty' }
+  | { kind: 'photo'; photo: CurrentPhoto }
+  | { kind: 'flight'; flight: LiveFlight; paletteIndex: number; overlayVariant: number }
 
 type DisplayPhase = 'loading' | 'locked' | 'ready' | 'empty' | 'error'
 
@@ -138,16 +145,17 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
   const [phase, setPhase] = useState<DisplayPhase>('loading')
   const [liveFlights, setLiveFlights] = useState<Flight[]>([])
   const [livePaletteIndices, setLivePaletteIndices] = useState<number[]>([])
+  const [currentPhoto, setCurrentPhoto] = useState<CurrentPhoto | null>(null)
   const [flightIndex, setFlightIndex] = useState(0)
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
 
-  const loadFlight = useCallback(async (signal?: AbortSignal) => {
+  const loadCurrentFrame = useCallback(async (signal?: AbortSignal) => {
     setPhase('loading')
     setMessage('')
 
     try {
-      const response = await fetch('/api/upcoming-flights', {
+      const response = await fetch('/api/current-frame', {
         credentials: 'same-origin',
         signal,
       })
@@ -156,21 +164,29 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
         setPhase('locked')
         return
       }
-      if (!response.ok) throw new Error('The live flight could not be loaded.')
+      if (!response.ok) throw new Error('The current frame could not be loaded.')
 
-      const data = (await response.json()) as LiveFlightResponse
-      if (!data.flights.length) {
+      const data = (await response.json()) as CurrentFrameResponse
+      if (data.kind === 'empty') {
+        setCurrentPhoto(null)
         setPhase('empty')
         return
       }
 
-      setLiveFlights(data.flights.map(toPosterFlight))
-      setLivePaletteIndices(data.flights.map((liveFlight) => liveFlight.paletteIndex ?? automaticPaletteIndex(liveFlight)))
+      if (data.kind === 'photo') {
+        setCurrentPhoto(data.photo)
+        setLiveFlights([])
+        setLivePaletteIndices([])
+      } else {
+        setCurrentPhoto(null)
+        setLiveFlights([toPosterFlight(data.flight)])
+        setLivePaletteIndices([data.paletteIndex ?? automaticPaletteIndex(data.flight)])
+      }
       setFlightIndex(0)
       setPhase('ready')
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
-      setMessage(error instanceof Error ? error.message : 'The live flight could not be loaded.')
+      setMessage(error instanceof Error ? error.message : 'The current frame could not be loaded.')
       setPhase('error')
     }
   }, [])
@@ -178,9 +194,9 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
   useEffect(() => {
     if (!open) return
     const controller = new AbortController()
-    void loadFlight(controller.signal)
+    void loadCurrentFrame(controller.signal)
     return () => controller.abort()
-  }, [loadFlight, open])
+  }, [loadCurrentFrame, open])
 
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -203,7 +219,7 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
       }
 
       setToken('')
-      await loadFlight()
+      await loadCurrentFrame()
     } catch {
       setMessage('The display could not be unlocked. Please try again.')
       setPhase('locked')
@@ -218,41 +234,31 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
         <X aria-hidden="true" />
       </button>
 
-      {phase === 'ready' && liveFlights[flightIndex] && (
+      {phase === 'ready' && currentPhoto && (
+        <div className="live-photo-preview">
+          <img
+            src={`/api/photos/${currentPhoto.id}/display?live=${encodeURIComponent(currentPhoto.updatedAt)}`}
+            alt={currentPhoto.name}
+          />
+          <p>Current frame · photo</p>
+        </div>
+      )}
+
+      {phase === 'ready' && !currentPhoto && liveFlights[flightIndex] && (
         <>
           <FlightPoster
             flight={liveFlights[flightIndex]}
             palette={palettes[livePaletteIndices[flightIndex] ?? 0] ?? palettes[0]}
             className="poster-fullscreen"
           />
-          {liveFlights.length > 1 && (
-            <nav className="flight-preview-nav" aria-label="Upcoming flight previews">
-              <button
-                type="button"
-                onClick={() => setFlightIndex((index) => Math.max(0, index - 1))}
-                disabled={flightIndex === 0}
-                aria-label="Previous flight"
-              >
-                <ChevronLeft aria-hidden="true" />
-              </button>
-              <p>Flight {flightIndex + 1} of {liveFlights.length}</p>
-              <button
-                type="button"
-                onClick={() => setFlightIndex((index) => Math.min(liveFlights.length - 1, index + 1))}
-                disabled={flightIndex === liveFlights.length - 1}
-                aria-label="Next flight"
-              >
-                <ChevronRight aria-hidden="true" />
-              </button>
-            </nav>
-          )}
+          <p className="live-frame-label">Current frame · flight</p>
         </>
       )}
 
       {phase === 'loading' && (
         <div className="display-state" role="status">
           <LoaderCircle className="state-spinner" aria-hidden="true" />
-          <p>Loading my next flight…</p>
+          <p>Loading the current frame…</p>
         </div>
       )}
 
@@ -279,8 +285,8 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
 
       {phase === 'empty' && (
         <div className="display-state">
-          <h2>No upcoming flight</h2>
-          <p>My Flighty calendar does not currently contain a future flight.</p>
+          <h2>No current frame</h2>
+          <p>The frame has no active flight or enabled photo right now.</p>
           <button
             type="button"
             onClick={() => {
@@ -300,7 +306,7 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
           <RefreshCw aria-hidden="true" />
           <h2>Couldn’t load the display</h2>
           <p>{message}</p>
-          <button type="button" onClick={() => void loadFlight()}>Try again</button>
+          <button type="button" onClick={() => void loadCurrentFrame()}>Try again</button>
         </div>
       )}
     </div>
