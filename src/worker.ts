@@ -848,17 +848,18 @@ async function handleCurrentFrame(env: Env): Promise<Response> {
   // Prefer the last successful frame fetch so this mirrors the e-paper's
   // actual state even when the device is asleep or temporarily offline.
   const snapshot = await lastFrameSelection(env)
-  const selection = snapshot?.selection ?? await selectFrame(env)
-  const confirmed = Boolean(snapshot)
+  if (!snapshot) {
+    return Response.json({ kind: 'unconfirmed', fetchedAt: null }, { headers: noStoreHeaders() })
+  }
+  const selection = snapshot.selection
   if (selection.kind === 'empty') {
-    return Response.json({ kind: 'empty', confirmed, fetchedAt: snapshot?.fetchedAt ?? null }, { headers: noStoreHeaders() })
+    return Response.json({ kind: 'empty', fetchedAt: snapshot.fetchedAt }, { headers: noStoreHeaders() })
   }
   if (selection.kind === 'photo') {
     return Response.json({
       kind: 'photo',
       photo: selection.photo,
-      confirmed,
-      fetchedAt: snapshot?.fetchedAt ?? null,
+      fetchedAt: snapshot.fetchedAt,
     }, { headers: noStoreHeaders() })
   }
   return Response.json({
@@ -866,8 +867,7 @@ async function handleCurrentFrame(env: Env): Promise<Response> {
     flight: selection.flight,
     paletteIndex: selection.paletteIndex,
     overlayVariant: selection.overlayVariant,
-    confirmed,
-    fetchedAt: snapshot?.fetchedAt ?? null,
+    fetchedAt: snapshot.fetchedAt,
   }, { headers: noStoreHeaders() })
 }
 

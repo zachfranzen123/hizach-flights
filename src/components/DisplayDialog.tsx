@@ -41,11 +41,12 @@ type CurrentPhoto = {
 }
 
 type CurrentFrameResponse =
-  | { kind: 'empty'; confirmed: boolean; fetchedAt: string | null }
-  | { kind: 'photo'; photo: CurrentPhoto; confirmed: boolean; fetchedAt: string | null }
-  | { kind: 'flight'; flight: LiveFlight; paletteIndex: number; overlayVariant: number; confirmed: boolean; fetchedAt: string | null }
+  | { kind: 'unconfirmed'; fetchedAt: null }
+  | { kind: 'empty'; fetchedAt: string }
+  | { kind: 'photo'; photo: CurrentPhoto; fetchedAt: string }
+  | { kind: 'flight'; flight: LiveFlight; paletteIndex: number; overlayVariant: number; fetchedAt: string }
 
-type DisplayPhase = 'loading' | 'locked' | 'ready' | 'empty' | 'error'
+type DisplayPhase = 'loading' | 'locked' | 'ready' | 'unconfirmed' | 'empty' | 'error'
 
 const airportDetails: Record<string, { city: string; timeZone: string }> = {
   ANC: { city: 'Anchorage', timeZone: 'America/Anchorage' },
@@ -155,7 +156,6 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
   const [liveFlights, setLiveFlights] = useState<Flight[]>([])
   const [livePaletteIndices, setLivePaletteIndices] = useState<number[]>([])
   const [currentPhoto, setCurrentPhoto] = useState<CurrentPhoto | null>(null)
-  const [frameConfirmed, setFrameConfirmed] = useState(false)
   const [frameFetchedAt, setFrameFetchedAt] = useState<string | null>(null)
   const [flightIndex, setFlightIndex] = useState(0)
   const [token, setToken] = useState('')
@@ -178,8 +178,14 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
       if (!response.ok) throw new Error('The current frame could not be loaded.')
 
       const data = (await response.json()) as CurrentFrameResponse
-      setFrameConfirmed(data.confirmed)
       setFrameFetchedAt(data.fetchedAt)
+      if (data.kind === 'unconfirmed') {
+        setCurrentPhoto(null)
+        setLiveFlights([])
+        setLivePaletteIndices([])
+        setPhase('unconfirmed')
+        return
+      }
       if (data.kind === 'empty') {
         setCurrentPhoto(null)
         setPhase('empty')
@@ -244,11 +250,9 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
   const frameCheckInIsStale = frameFetchedAt
     ? Date.now() - new Date(frameFetchedAt).getTime() > 30 * 60 * 1000
     : true
-  const frameStatus = !frameConfirmed
-    ? 'Next image queued'
-    : frameCheckInIsStale
-      ? 'Last image sent · check-in overdue'
-      : 'Last image sent'
+  const frameStatus = frameCheckInIsStale
+    ? 'Last image sent · check-in overdue'
+    : 'Last image sent'
   const frameFetchTime = frameFetchedAt ? frameFetchLabel(frameFetchedAt) : null
 
   return (
@@ -288,6 +292,15 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
         <div className="display-state" role="status">
           <LoaderCircle className="state-spinner" aria-hidden="true" />
           <p>Loading the current frame…</p>
+        </div>
+      )}
+
+      {phase === 'unconfirmed' && (
+        <div className="display-state" role="status">
+          <RefreshCw aria-hidden="true" />
+          <h2>Display hasn’t checked in yet</h2>
+          <p>The website cannot confirm what is physically on the frame until the EE02 requests its next image.</p>
+          <button type="button" onClick={() => void loadCurrentFrame()}>Check again</button>
         </div>
       )}
 
