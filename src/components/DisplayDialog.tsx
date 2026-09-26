@@ -41,9 +41,9 @@ type CurrentPhoto = {
 }
 
 type CurrentFrameResponse =
-  | { kind: 'empty' }
-  | { kind: 'photo'; photo: CurrentPhoto }
-  | { kind: 'flight'; flight: LiveFlight; paletteIndex: number; overlayVariant: number }
+  | { kind: 'empty'; confirmed: boolean; fetchedAt: string | null }
+  | { kind: 'photo'; photo: CurrentPhoto; confirmed: boolean; fetchedAt: string | null }
+  | { kind: 'flight'; flight: LiveFlight; paletteIndex: number; overlayVariant: number; confirmed: boolean; fetchedAt: string | null }
 
 type DisplayPhase = 'loading' | 'locked' | 'ready' | 'empty' | 'error'
 
@@ -113,6 +113,15 @@ function timeLabel(iso: string, timeZone: string): string {
   }).format(new Date(iso))
 }
 
+function frameFetchLabel(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
 export function toPosterFlight(live: LiveFlight): Flight {
   const origin = airportDetails[live.origin] ?? { city: live.origin, timeZone: 'UTC' }
   const destination = airportDetails[live.destination] ?? { city: live.destination, timeZone: 'UTC' }
@@ -146,6 +155,8 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
   const [liveFlights, setLiveFlights] = useState<Flight[]>([])
   const [livePaletteIndices, setLivePaletteIndices] = useState<number[]>([])
   const [currentPhoto, setCurrentPhoto] = useState<CurrentPhoto | null>(null)
+  const [frameConfirmed, setFrameConfirmed] = useState(false)
+  const [frameFetchedAt, setFrameFetchedAt] = useState<string | null>(null)
   const [flightIndex, setFlightIndex] = useState(0)
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
@@ -167,6 +178,8 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
       if (!response.ok) throw new Error('The current frame could not be loaded.')
 
       const data = (await response.json()) as CurrentFrameResponse
+      setFrameConfirmed(data.confirmed)
+      setFrameFetchedAt(data.fetchedAt)
       if (data.kind === 'empty') {
         setCurrentPhoto(null)
         setPhase('empty')
@@ -228,6 +241,16 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
 
   if (!open) return null
 
+  const frameCheckInIsStale = frameFetchedAt
+    ? Date.now() - new Date(frameFetchedAt).getTime() > 30 * 60 * 1000
+    : true
+  const frameStatus = !frameConfirmed
+    ? 'Next image queued'
+    : frameCheckInIsStale
+      ? 'Last image sent · check-in overdue'
+      : 'Last image sent'
+  const frameFetchTime = frameFetchedAt ? frameFetchLabel(frameFetchedAt) : null
+
   return (
     <div className="display-dialog" role="dialog" aria-modal="true" aria-label="Personal flight display">
       <button className="dialog-close" type="button" onClick={onClose} aria-label="Close display preview">
@@ -240,7 +263,10 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
             src={`/api/photos/${currentPhoto.id}/display?live=${encodeURIComponent(currentPhoto.updatedAt)}`}
             alt={currentPhoto.name}
           />
-          <p>Current frame · photo</p>
+          <p>
+            {frameStatus} · photo
+            {frameFetchTime && <time dateTime={frameFetchedAt ?? undefined}>Frame fetched {frameFetchTime}</time>}
+          </p>
         </div>
       )}
 
@@ -251,7 +277,10 @@ export function DisplayDialog({ open, onClose, flight, palette }: DisplayDialogP
             palette={palettes[livePaletteIndices[flightIndex] ?? 0] ?? palettes[0]}
             className="poster-fullscreen"
           />
-          <p className="live-frame-label">Current frame · flight</p>
+          <p className="live-frame-label">
+            {frameStatus} · flight
+            {frameFetchTime && <time dateTime={frameFetchedAt ?? undefined}>Frame fetched {frameFetchTime}</time>}
+          </p>
         </>
       )}
 

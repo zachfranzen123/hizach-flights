@@ -849,15 +849,24 @@ async function handleCurrentFrame(env: Env): Promise<Response> {
   // actual state even when the device is asleep or temporarily offline.
   const snapshot = await lastFrameSelection(env)
   const selection = snapshot?.selection ?? await selectFrame(env)
-  if (selection.kind === 'empty') return Response.json({ kind: 'empty' }, { headers: noStoreHeaders() })
+  const confirmed = Boolean(snapshot)
+  if (selection.kind === 'empty') {
+    return Response.json({ kind: 'empty', confirmed, fetchedAt: snapshot?.fetchedAt ?? null }, { headers: noStoreHeaders() })
+  }
   if (selection.kind === 'photo') {
-    return Response.json({ kind: 'photo', photo: selection.photo, fetchedAt: snapshot?.fetchedAt ?? null }, { headers: noStoreHeaders() })
+    return Response.json({
+      kind: 'photo',
+      photo: selection.photo,
+      confirmed,
+      fetchedAt: snapshot?.fetchedAt ?? null,
+    }, { headers: noStoreHeaders() })
   }
   return Response.json({
     kind: 'flight',
     flight: selection.flight,
     paletteIndex: selection.paletteIndex,
     overlayVariant: selection.overlayVariant,
+    confirmed,
     fetchedAt: snapshot?.fetchedAt ?? null,
   }, { headers: noStoreHeaders() })
 }
