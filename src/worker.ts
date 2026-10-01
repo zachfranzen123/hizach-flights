@@ -137,6 +137,7 @@ const FRAME_RENDER_PREFIX = 'renders/'
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
   IB: new Set(['A319', 'A320', 'A321', 'A332']),
+  UA: new Set(['B772']),
   VY: new Set(['A21N']),
 }
 
@@ -144,6 +145,7 @@ const airlineIcaoByIata: Record<string, string> = {
   AF: 'AFR',
   AS: 'ASA',
   IB: 'IBE',
+  UA: 'UAL',
   VY: 'VLG',
 }
 
@@ -151,6 +153,7 @@ const airlineNameByIata: Record<string, string> = {
   AF: 'Air France',
   AS: 'Alaska Airlines',
   IB: 'Iberia',
+  UA: 'United Airlines',
   VY: 'Vueling',
 }
 
@@ -172,6 +175,7 @@ const equipmentNameByIcao: Record<string, string> = {
   B738: 'Boeing 737-800',
   B739: 'Boeing 737-900ER',
   B789: 'Boeing 787-9',
+  B772: 'Boeing 777-200ER',
   CRJX: 'Bombardier CRJ-1000',
   E75L: 'Embraer 175',
 }
@@ -1194,51 +1198,3 @@ export default {
       }
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/calendar-preview') {
-      try {
-        const now = Date.now()
-        const events = (await calendarEvents(env))
-          .sort((a, b) => a.start.getTime() - b.start.getTime())
-          .slice(0, 20)
-          .map((event) => ({
-            summary: event.summary,
-            start: event.start.toISOString(),
-            end: event.end.toISOString(),
-            upcoming: event.end.getTime() >= now,
-            identity: flightIdentity(event),
-          }))
-        return Response.json(
-          { now: new Date(now).toISOString(), events },
-          { headers: noStoreHeaders() },
-        )
-      } catch (error) {
-        console.error(JSON.stringify({ event: 'calendar_preview_error', message: error instanceof Error ? error.message : 'Unknown error' }))
-        return jsonError('Calendar unavailable', 502)
-      }
-    }
-
-    const tailMatch = url.pathname.match(/^\/api\/airline-tail\/([A-Z0-9]{3})$/)
-    if (request.method === 'GET' && tailMatch) {
-      return handleTail(tailMatch[1], env)
-    }
-
-    if (request.method === 'POST' && url.pathname === '/api/lock') {
-      return Response.json(
-        { ok: true },
-        {
-          headers: noStoreHeaders({
-            'Set-Cookie': 'hizach_display=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0',
-          }),
-        },
-      )
-    }
-
-    return jsonError('Not found', 404)
-  },
-
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(sendMissingArtworkAlert(env).catch((error) => {
-      console.error(JSON.stringify({ event: 'artwork_alert_scheduled_error', message: error instanceof Error ? error.message : 'Unknown error' }))
-    }))
-  },
-} satisfies ExportedHandler<Env>
