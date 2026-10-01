@@ -11,6 +11,7 @@ import alaska737Max9 from '../assets/aircraft/alaska-737-max-9.png'
 import alaskaE175 from '../assets/aircraft/alaska-e175.png'
 // Alaska 787-9 uses the DDS-referenced transparent Dreamliner cutout.
 import alaska7879 from '../assets/aircraft/alaska-787-9.png'
+import united777200er from '../assets/aircraft/united-777-200er.png'
 import type { Flight } from '../data/sampleFlight'
 import { DestinationOverlay } from './DestinationOverlay'
 
@@ -50,6 +51,8 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
       }
     : flight.airlineIata === 'VY'
       ? { A21N: vuelingA321neo }
+      : flight.airlineIata === 'UA'
+        ? { B772: united777200er }
       : {
         A319: iberiaA319,
         A320: iberiaA320,
