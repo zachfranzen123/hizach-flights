@@ -137,7 +137,7 @@ const FRAME_RENDER_PREFIX = 'renders/'
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
   IB: new Set(['A319', 'A320', 'A321', 'A332']),
-  UA: new Set(['B772']),
+  UA: new Set(['B772', 'B789']),
   VY: new Set(['A21N']),
 }
 
@@ -1198,5 +1198,3 @@ export default {
       }
     }
 
-
-// United aircraft artwork deployment marker.
