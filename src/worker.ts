@@ -132,7 +132,9 @@ const FLIGHTAWARE_CACHE_VERSION = 'v2'
 const FLIGHT_MODE_LEAD_MS = 3 * 60 * 60 * 1000
 const PHOTO_ROTATION_MS = 6 * 60 * 60 * 1000
 const FRAME_RENDER_SIGNATURE_MS = 2 * 60 * 1000
-// Bump this whenever aircraft artwork changes so old rendered posters cannot\n// keep serving a cached "artwork pending" image for the same flight.\nconst FRAME_RENDER_PREFIX = 'renders/v2/'
+// Bump this whenever aircraft artwork changes so old rendered posters cannot
+// keep serving a cached "artwork pending" image for the same flight.
+const FRAME_RENDER_PREFIX = 'renders/v2/'
 
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
@@ -1198,5 +1200,51 @@ export default {
       }
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/calendar-preview') {
+      try {
+        const now = Date.now()
+        const events = (await calendarEvents(env))
+          .sort((a, b) => a.start.getTime() - b.start.getTime())
+          .slice(0, 20)
+          .map((event) => ({
+            summary: event.summary,
+            start: event.start.toISOString(),
+            end: event.end.toISOString(),
+            upcoming: event.end.getTime() >= now,
+            identity: flightIdentity(event),
+          }))
+        return Response.json(
+          { now: new Date(now).toISOString(), events },
+          { headers: noStoreHeaders() },
+        )
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'calendar_preview_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+        return jsonError('Calendar unavailable', 502)
+      }
+    }
 
-// United 787-9 deployment trigger.
+    const tailMatch = url.pathname.match(/^\/api\/airline-tail\/([A-Z0-9]{3})$/)
+    if (request.method === 'GET' && tailMatch) {
+      return handleTail(tailMatch[1], env)
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/lock') {
+      return Response.json(
+        { ok: true },
+        {
+          headers: noStoreHeaders({
+            'Set-Cookie': 'hizach_display=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0',
+          }),
+        },
+      )
+    }
+
+    return jsonError('Not found', 404)
+  },
+
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(sendMissingArtworkAlert(env).catch((error) => {
+      console.error(JSON.stringify({ event: 'artwork_alert_scheduled_error', message: error instanceof Error ? error.message : 'Unknown error' }))
+    }))
+  },
+} satisfies ExportedHandler<Env>
