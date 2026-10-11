@@ -20,8 +20,13 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    // Pages go through the Worker too, so live.hizach.com can count them.
+    // Built files under /assets/ are still served directly.
+    "run_worker_first": ["/*", "!/assets/*"]
   },
+  "services": [
+    { "binding": "LIVE", "service": "hizach-live", "entrypoint": "LiveTap" }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
