@@ -1111,6 +1111,12 @@ export default {
       }
     }
 
+    // Serve the public React app through the static asset binding. Keep all
+    // /api/* endpoints behind their existing authorization checks below.
+    if ((request.method === 'GET' || request.method === 'HEAD') && !url.pathname.startsWith('/api/')) {
+      return env.ASSETS.fetch(request)
+    }
+
     if (!(await isAuthorized(request, env))) return jsonError('Unauthorized', 401)
 
     if (request.method === 'GET' && url.pathname === '/api/frame-image') {
