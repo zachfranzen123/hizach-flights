@@ -14,6 +14,7 @@ import alaska7879 from '../assets/aircraft/alaska-787-9.png'
 import united777200er from '../assets/aircraft/united-777-200er.png'
 import united7879 from '../assets/aircraft/united-787-9.png'
 import united737Max9 from '../assets/aircraft/united-737-max-9.png'
+import airFrance777300er from '../assets/aircraft/air-france-777-300er.png'
 import type { Flight } from '../data/sampleFlight'
 import { DestinationOverlay } from './DestinationOverlay'
 
@@ -55,6 +56,8 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
       ? { A21N: vuelingA321neo }
       : flight.airlineIata === 'UA'
         ? { B772: united777200er, B789: united7879, B39M: united737Max9 }
+      : flight.airlineIata === 'AF'
+        ? { B77W: airFrance777300er }
       : {
         A319: iberiaA319,
         A320: iberiaA320,

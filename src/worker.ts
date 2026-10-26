@@ -134,9 +134,10 @@ const PHOTO_ROTATION_MS = 6 * 60 * 60 * 1000
 const FRAME_RENDER_SIGNATURE_MS = 2 * 60 * 1000
 // Bump this whenever aircraft artwork changes so old rendered posters cannot
 // keep serving a cached "artwork pending" image for the same flight.
-const FRAME_RENDER_PREFIX = 'renders/v2/'
+const FRAME_RENDER_PREFIX = 'renders/v3/'
 
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
+  AF: new Set(['B77W']),
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
   IB: new Set(['A319', 'A320', 'A321', 'A332']),
   UA: new Set(['B772', 'B789', 'B39M']),
@@ -178,6 +179,7 @@ const equipmentNameByIcao: Record<string, string> = {
   B739: 'Boeing 737-900ER',
   B789: 'Boeing 787-9',
   B772: 'Boeing 777-200ER',
+  B77W: 'Boeing 777-300ER',
   CRJX: 'Bombardier CRJ-1000',
   E75L: 'Embraer 175',
 }
