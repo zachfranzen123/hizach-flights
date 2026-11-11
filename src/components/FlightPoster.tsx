@@ -15,6 +15,10 @@ import united777200er from '../assets/aircraft/united-777-200er.png'
 import united7879 from '../assets/aircraft/united-787-9.png'
 import united737Max9 from '../assets/aircraft/united-737-max-9.png'
 import airFrance777300er from '../assets/aircraft/air-france-777-300er.png'
+import airCanadaCrj9 from '../assets/aircraft/AC-CRJ9.png'
+import airCanada777300er from '../assets/aircraft/AC-B77W.png'
+import emiratesA380 from '../assets/aircraft/EK-A388.png'
+import emirates777300er from '../assets/aircraft/EK-B77W.png'
 import type { Flight } from '../data/sampleFlight'
 import { DestinationOverlay } from './DestinationOverlay'
 
@@ -58,6 +62,10 @@ export function FlightPoster({ flight, palette, className = '' }: FlightPosterPr
         ? { B772: united777200er, B789: united7879, B39M: united737Max9 }
       : flight.airlineIata === 'AF'
         ? { B77W: airFrance777300er }
+      : flight.airlineIata === 'AC'
+        ? { CRJ9: airCanadaCrj9, B77W: airCanada777300er }
+      : flight.airlineIata === 'EK'
+        ? { A388: emiratesA380, B77W: emirates777300er }
       : {
         A319: iberiaA319,
         A320: iberiaA320,

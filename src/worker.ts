@@ -134,27 +134,33 @@ const PHOTO_ROTATION_MS = 6 * 60 * 60 * 1000
 const FRAME_RENDER_SIGNATURE_MS = 2 * 60 * 1000
 // Bump this whenever aircraft artwork changes so old rendered posters cannot
 // keep serving a cached "artwork pending" image for the same flight.
-const FRAME_RENDER_PREFIX = 'renders/v3/'
+const FRAME_RENDER_PREFIX = 'renders/v4/'
 
 const artworkByAirline: Record<string, ReadonlySet<string>> = {
+  AC: new Set(['CRJ9', 'B77W']),
   AF: new Set(['B77W']),
   AS: new Set(['B737', 'B738', 'B739', 'B38M', 'B39M', 'E75L', 'B789']),
+  EK: new Set(['A388', 'B77W']),
   IB: new Set(['A319', 'A320', 'A321', 'A332']),
   UA: new Set(['B772', 'B789', 'B39M']),
   VY: new Set(['A21N']),
 }
 
 const airlineIcaoByIata: Record<string, string> = {
+  AC: 'ACA',
   AF: 'AFR',
   AS: 'ASA',
+  EK: 'UAE',
   IB: 'IBE',
   UA: 'UAL',
   VY: 'VLG',
 }
 
 const airlineNameByIata: Record<string, string> = {
+  AC: 'Air Canada',
   AF: 'Air France',
   AS: 'Alaska Airlines',
+  EK: 'Emirates',
   IB: 'Iberia',
   UA: 'United Airlines',
   VY: 'Vueling',
@@ -172,6 +178,7 @@ const equipmentNameByIcao: Record<string, string> = {
   A332: 'Airbus A330-200',
   A333: 'Airbus A330-300',
   A359: 'Airbus A350-900',
+  A388: 'Airbus A380-800',
   B38M: 'Boeing 737 MAX 8',
   B39M: 'Boeing 737 MAX 9',
   B737: 'Boeing 737-700',
@@ -180,6 +187,7 @@ const equipmentNameByIcao: Record<string, string> = {
   B789: 'Boeing 787-9',
   B772: 'Boeing 777-200ER',
   B77W: 'Boeing 777-300ER',
+  CRJ9: 'Bombardier CRJ900',
   CRJX: 'Bombardier CRJ-1000',
   E75L: 'Embraer 175',
 }
